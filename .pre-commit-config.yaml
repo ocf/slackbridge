@@ -1,0 +1,34 @@
+-   repo: https://github.com/chriskuehl/pre-commit-hooks.git
+    sha: cd3f867cafee3488a93a13f97bf7fdab329c996e
+    hooks:
+    -   id: autopep8-wrapper
+        language_version: python3
+    -   id: check-added-large-files
+    -   id: check-docstring-first
+        language_version: python3
+    -   id: check-json
+    -   id: check-merge-conflict
+    -   id: check-xml
+    -   id: check-yaml
+    -   id: debug-statements
+        language_version: python3
+    -   id: detect-private-key
+    -   id: double-quote-string-fixer
+        language_version: python3
+    -   id: end-of-file-fixer
+    -   id: flake8
+        language_version: python3
+        exclude: ^vendor/
+    -   id: name-tests-test
+    -   id: requirements-txt-fixer
+    -   id: trailing-whitespace
+-   repo: https://github.com/chriskuehl/reorder_python_imports.git
+    sha: 138f897f7d53c53dd4535dc377764fa3a58e310c
+    hooks:
+    -   id: reorder-python-imports
+        language_version: python3
+-   repo: https://github.com/chriskuehl/pre-commit-hooks-1.git
+    sha: cb3b03ba29a70be8ff4702429ea331cfc61b87c8
+    hooks:
+    -   id: remove-tabs
+        exclude: (Makefile|debian/rules)$
