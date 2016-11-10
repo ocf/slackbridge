@@ -64,7 +64,7 @@ def main():
     parser.add_argument(
         '-c',
         '--config',
-        default='/opt/slackbridge/bridge.conf',
+        default='/etc/ocf-slackbridge/slackbridge.conf',
         help='Config file to read from.',
     )
     args = parser.parse_args()
@@ -73,7 +73,8 @@ def main():
     conf.read(args.config)
 
     # irc bot thread
-    bot = CreateBot('tmp_passwd')
+    nickserv_pass = conf.get('irc', 'nickserv_pass')
+    bot = CreateBot(nickserv_pass)
     bot_thread = threading.Thread(target=bot.start, daemon=True)
     bot_thread.start()
 
