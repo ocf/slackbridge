@@ -6,7 +6,7 @@ test:
 		pre-commit run --all-files
 
 venv: vendor/venv-update requirements.txt requirements-dev.txt
-		vendor/venv-update venv= -ppython3.4 venv install= -r requirements.txt -r requirements-dev.txt
+		vendor/venv-update venv= -ppython3 venv install= -r requirements.txt -r requirements-dev.txt
 
 .PHONY: clean
 clean:
