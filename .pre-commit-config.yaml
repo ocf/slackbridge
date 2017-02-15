@@ -1,5 +1,5 @@
--   repo: https://github.com/chriskuehl/pre-commit-hooks.git
-    sha: cd3f867cafee3488a93a13f97bf7fdab329c996e
+-   repo: https://github.com/pre-commit/pre-commit-hooks.git
+    sha: v0.7.1
     hooks:
     -   id: autopep8-wrapper
         language_version: python3
@@ -18,17 +18,16 @@
     -   id: end-of-file-fixer
     -   id: flake8
         language_version: python3
-        exclude: ^vendor/
     -   id: name-tests-test
     -   id: requirements-txt-fixer
     -   id: trailing-whitespace
--   repo: https://github.com/chriskuehl/reorder_python_imports.git
-    sha: 138f897f7d53c53dd4535dc377764fa3a58e310c
+-   repo: https://github.com/asottile/reorder_python_imports.git
+    sha: v0.3.1
     hooks:
     -   id: reorder-python-imports
         language_version: python3
--   repo: https://github.com/chriskuehl/pre-commit-hooks-1.git
-    sha: cb3b03ba29a70be8ff4702429ea331cfc61b87c8
+-   repo: https://github.com/Lucas-C/pre-commit-hooks.git
+    sha: v1.0.1
     hooks:
     -   id: remove-tabs
-        exclude: (Makefile|debian/rules)$
+        files: \.py$
