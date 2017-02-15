@@ -2,8 +2,8 @@ DOCKER_REVISION ?= testing-$(USER)
 DOCKER_TAG = docker-push.ocf.berkeley.edu/slackbridge:$(DOCKER_REVISION)
 
 .PHONY: test
-test:
-		pre-commit run --all-files
+test: venv
+		venv/bin/pre-commit run --all-files
 
 venv: vendor/venv-update requirements.txt requirements-dev.txt
 		vendor/venv-update venv= -ppython3 venv install= -r requirements.txt -r requirements-dev.txt

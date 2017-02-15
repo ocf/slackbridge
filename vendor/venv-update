@@ -49,7 +49,7 @@ See https://pip.readthedocs.org/en/stable/user_guide/#environment-variables
 For example:
     PIP_INDEX_URL=https://pypi.example.com/simple venv-update
 
-Please send issues to: https://github.com/yelp/pip-faster
+Please send issues to: https://github.com/yelp/venv-update
 '''
 from __future__ import absolute_import
 from __future__ import print_function
@@ -59,7 +59,7 @@ from os.path import exists
 from os.path import join
 from subprocess import CalledProcessError
 
-__version__ = '2.0.0'
+__version__ = '2.1.0'
 DEFAULT_VIRTUALENV_PATH = 'venv'
 DEFAULT_OPTION_VALUES = {
     'venv=': (DEFAULT_VIRTUALENV_PATH,),
@@ -164,8 +164,7 @@ def exec_(argv):  # never returns
     """Wrapper to os.execv which shows the command and runs any atexit handlers (for coverage's sake).
     Like os.execv, this function never returns.
     """
-    # info('EXEC' + colorize(argv))  # TODO: debug logging by environment
-    # variable
+    # info('EXEC' + colorize(argv))  # TODO: debug logging by environment variable
 
     # in python3, sys.exitfunc has gone away, and atexit._run_exitfuncs seems to be the only pubic-ish interface
     #   https://hg.python.org/cpython/file/3.4/Modules/atexitmodule.c#l289
@@ -199,11 +198,9 @@ def exec_scratch_virtualenv(args):
 
     if not exists(join(scratch.src, 'virtualenv.py')):
         scratch_python = venv_python(scratch.venv)
-        # TODO: do we allow user-defined override of which version of
-        # virtualenv to install?
+        # TODO: do we allow user-defined override of which version of virtualenv to install?
         tmp = scratch.src + '.tmp'
-        run((scratch_python, '-m', 'pip.__main__',
-             'install', 'virtualenv', '--target', tmp))
+        run((scratch_python, '-m', 'pip.__main__', 'install', 'virtualenv', '--target', tmp))
 
         from os import rename
         rename(tmp, scratch.src)
@@ -216,8 +213,7 @@ def exec_scratch_virtualenv(args):
         # TODO-TEST: sometimes we would get a stale version of venv-update
         exec_((scratch.python, dotpy(__file__)) + args)  # never returns
 
-    # TODO-TEST: the original venv-update's directory was on sys.path (when
-    # using symlinking)
+    # TODO-TEST: the original venv-update's directory was on sys.path (when using symlinking)
     sys.path[0] = scratch.src
 
 
@@ -294,8 +290,7 @@ def ensure_virtualenv(args, return_values):
         destination_python = venv_python(venv_path)
 
         if exists(destination_python):
-            reason = invalid_virtualenv_reason(
-                venv_path, source_python, destination_python, options)
+            reason = invalid_virtualenv_reason(venv_path, source_python, destination_python, options)
             if reason:
                 info('Removing invalidated virtualenv. (%s)' % reason)
                 run(('rm', '-rf', venv_path))
@@ -345,8 +340,7 @@ def mark_venv_invalid(venv_path):
     from os.path import isdir
     if venv_path and isdir(venv_path):
         info('')
-        info("Something went wrong! Sending '%s' back in time, so make knows it's invalid." %
-             timid_relpath(venv_path))
+        info("Something went wrong! Sending '%s' back in time, so make knows it's invalid." % timid_relpath(venv_path))
         wait_for_all_subprocesses()
         touch(venv_path, 0)
 
@@ -393,8 +387,7 @@ def venv_update(
         if return_values.venv_path is None:
             return
         # invariant: the final virtualenv exists, with the right python version
-        raise_on_failure(lambda: pip_faster(
-            return_values.venv_path, pip_command, install, bootstrap_deps))
+        raise_on_failure(lambda: pip_faster(return_values.venv_path, pip_command, install, bootstrap_deps))
     except BaseException:
         mark_venv_invalid(return_values.venv_path)
         raise
