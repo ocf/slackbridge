@@ -38,14 +38,16 @@ class BotFactory(ReconnectingClientFactory):
 
 class BridgeBotFactory(ReconnectingClientFactory):
 
-    def __init__(self, slack_client, nickserv_password, channels):
+    def __init__(self, slack_client, nickserv_password, slack_uid, channels):
         self.slack_client = slack_client
+        self.slack_uid = slack_uid
         self.nickserv_password = nickserv_password
         self.channels = channels
         self.bot_class = BridgeBot
 
     def buildProtocol(self, addr):
-        p = BridgeBot(self.slack_client, self.nickserv_password, self.channels)
+        p = BridgeBot(self.slack_client, self.nickserv_password,
+                      self.slack_uid, self.channels)
         p.factory = self
         self.resetDelay()
         return p
@@ -68,11 +70,11 @@ class UserBot(irc.IRCClient):
 class BridgeBot(irc.IRCClient):
     nickname = IRC_NICKNAME
 
-    def __init__(self, slack_client, nickserv_password, user, channels):
+    def __init__(self, slack_client, nickserv_password, slack_uid, channels):
         self.topics = {}
         self.sc = slack_client
         self.nickserv_password = nickserv_password
-        self.slack_user = user
+        self.slack_uid = slack_uid
         self.slack_channels = channels
 
     def connectionLost(self, reason):
