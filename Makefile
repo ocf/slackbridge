@@ -15,7 +15,7 @@ clean:
 .PHONY: update-requirements
 update-requirements:
 		$(eval TMP := $(shell mktemp -d))
-		python ./vendor/venv-update venv= $(TMP) -ppython3.4 install= -r requirements.txt
+		python ./vendor/venv-update venv= $(TMP) -ppython3 install= -r requirements.txt
 		. $(TMP)/bin/activate && \
 				pip install --upgrade pip && \
 				pip freeze | sed 's/^ocflib==.*/ocflib/' > requirements.txt
