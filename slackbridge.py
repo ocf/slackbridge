@@ -1,59 +1,120 @@
 #!/usr/bin/env python3
 """Bridge between IRC and Slack"""
 import argparse
-import ssl
-import threading
-import time
+import hashlib
+import sys
 from configparser import ConfigParser
-from datetime import date
 
-import irc.bot
-import irc.connection
+from ocflib.misc.mail import send_problem_report
+from slackclient import SlackClient
+from twisted.internet import reactor
+from twisted.internet import ssl
+from twisted.internet.protocol import ReconnectingClientFactory
+from twisted.python import log
+from twisted.words.protocols import irc
 
 IRC_HOST = 'dev-irc.ocf.berkeley.edu'
 IRC_PORT = 6697
-
-IRC_CHANNELS = ('#test',)
-
-IRC_NICKNAME = 'slack-bridge-test'
+IRC_NICKNAME = 'slack-bridge'
+GRAVATAR_URL = 'http://www.gravatar.com/avatar/{}?s=48&r=any&default=identicon'
 
 
-class CreateBot(irc.bot.SingleServerIRCBot):
+class BotFactory(ReconnectingClientFactory):
 
-    def __init__(self, nickserv_password):
-        self.topics = {}
+    def buildProtocol(self, addr):
+        p = BridgeBot(self.slack_client, self.nickserv_password, self.channels)
+        p.factory = self
+        self.resetDelay()
+        return p
+
+    def clientConnectionLost(self, connector, reason):
+        log.msg('Lost connection.  Reason: {}'.format(reason))
+        super().clientConnectionLost(self, connector, reason)
+
+    def clientConnectionFailed(self, connector, reason):
+        log.msg('Connection failed. Reason: {}'.format(reason))
+        super().clientConnectionFailed(self, connector, reason)
+
+
+class BridgeBotFactory(ReconnectingClientFactory):
+
+    def __init__(self, slack_client, nickserv_password, channels):
+        self.slack_client = slack_client
         self.nickserv_password = nickserv_password
-        factory = irc.connection.Factory(wrapper=ssl.wrap_socket)
+        self.channels = channels
+        self.bot_class = BridgeBot
 
-        super().__init__(
-            [(IRC_HOST, IRC_PORT)],
-            IRC_NICKNAME,
-            IRC_NICKNAME,
-            connect_factory=factory
+    def buildProtocol(self, addr):
+        p = BridgeBot(self.slack_client, self.nickserv_password, self.channels)
+        p.factory = self
+        self.resetDelay()
+        return p
+
+    def clientConnectionLost(self, connector, reason):
+        log.msg('Lost connection.  Reason: {}'.format(reason))
+        super().clientConnectionLost(self, connector, reason)
+
+    def clientConnectionFailed(self, connector, reason):
+        log.msg('Connection failed. Reason: {}'.format(reason))
+        super().clientConnectionFailed(self, connector, reason)
+
+
+class UserBot(irc.IRCClient):
+    # Not implemented yet, but this will be so that there is a bot per Slack
+    # user, like with the current bridge
+    pass
+
+
+class BridgeBot(irc.IRCClient):
+    nickname = IRC_NICKNAME
+
+    def __init__(self, slack_client, nickserv_password, user, channels):
+        self.topics = {}
+        self.sc = slack_client
+        self.nickserv_password = nickserv_password
+        self.slack_user = user
+        self.slack_channels = channels
+
+    def connectionLost(self, reason):
+        log.msg('Connection lost with IRC server: {}'.format(reason))
+        super().connectionLost(self, reason)
+
+    def signedOn(self):
+        self.msg('NickServ', 'identify {}'.format(self.nickserv_password))
+        log.msg('Authenticated with NickServ')
+
+        for channel in self.slack_channels:
+            log.msg('Joining #{}'.format(channel))
+            self.join('#{}'.format(channel))
+
+    def privmsg(self, user, channel, message):
+        # user is like 'jvperrin!Jason@fireball.ocf.berkeley.edu' so only
+        # take the part before the exclamation mark for the Slack display name
+        assert user.count('!') == 1
+        nickname, _ = user.split('!')
+
+        self.post_to_slack(nickname, channel, message)
+
+    def post_to_slack(self, user, channel, message):
+        email_hash = hashlib.md5()
+        email = '{}@ocf.berkeley.edu'.format(user)
+        email_hash.update(email.encode())
+        user_icon = GRAVATAR_URL.format(email_hash.hexdigest())
+
+        self.sc.api_call(
+            'chat.postMessage',
+            channel=channel,
+            text=message,
+            as_user=False,
+            username=user,
+            icon_url=user_icon,
         )
 
-    def on_welcome(self, conn, _):
-        conn.privmsg('NickServ', 'identify {}'.format(self.nickserv_password))
+    def check_slack_rtm(self):
+        message = self.sc.rtm_read()
 
-        for channel in IRC_CHANNELS:
-            conn.join(channel)
-
-    def on_pubmsg(self, conn, event):
-        conn.privmsg(event.target, 'test message')
-
-
-def bot_announce(bot, targets, message):
-    for target in targets:
-        bot.connection.privmsg(target, message)
-
-
-def timer(bot):
-    last_date = None
-    while True:
-        last_date, old = date.today(), last_date
-        if old and last_date != old:
-            bot.bump_topic()
-        time.sleep(1)
+        if message:
+            log.msg(message)
 
 
 def main():
@@ -72,34 +133,40 @@ def main():
     conf = ConfigParser()
     conf.read(args.config)
 
-    # irc bot thread
+    # Slack configuration
+    slack_token = conf.get('slack', 'token')
+    slack_uid = conf.get('slack', 'user')
+    sc = SlackClient(slack_token)
+
+    # Get all channels from Slack
+    # TODO: Remove duplication between here and the user selection part
+    # This should just be made into a generic Slack API call method
+    results = sc.api_call('channels.list', exclude_archived=1)
+    if results['ok']:
+        channels = results['channels']
+        slack_channel_names = [c['name'] for c in channels]
+    else:
+        send_problem_report('Error fetching channels from Slack API')
+        sys.exit(1)
+
+    # Get all users from Slack
+    # results = sc.api_call('users.list')
+    #  if results['ok']:
+    #     users = [m for m in results['members'] if not m['is_bot'] and not
+    #              m['deleted'] and m['name'] != 'slackbot']
+    #  else:
+    #     send_problem_report('Error fetching users from Slack API')
+    #     sys.exit(1)
+
+    log.startLogging(sys.stdout)
+
+    # Main IRC bot thread
     nickserv_pass = conf.get('irc', 'nickserv_pass')
-    bot = CreateBot(nickserv_pass)
-    bot_thread = threading.Thread(target=bot.start, daemon=True)
-    bot_thread.start()
-
-    # celery thread
-    # celery_thread = threading.Thread(
-    #    target=celery_listener,
-    #    args=(bot, conf.get('celery', 'broker')),
-    #    daemon=True,
-    # )
-    # celery_thread.start()
-
-    # timer thread
-    timer_thread = threading.Thread(
-        target=timer,
-        args=(bot,),
-        daemon=True,
-    )
-    timer_thread.start()
-
-    while True:
-        for thread in (bot_thread, timer_thread):
-            if not thread.is_alive():
-                raise RuntimeError('Thread exited: {}'.format(thread))
-
-        time.sleep(0.1)
+    bridge_factory = BridgeBotFactory(
+        sc, nickserv_pass, slack_uid, slack_channel_names)
+    reactor.connectSSL(IRC_HOST, IRC_PORT, bridge_factory,
+                       ssl.ClientContextFactory())
+    reactor.run()
 
 
 if __name__ == '__main__':
