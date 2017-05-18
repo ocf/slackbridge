@@ -5,6 +5,7 @@ RUN apt-get update \
         build-essential \
         cracklib-runtime \
         libcrack2-dev \
+        libffi-dev \
         libssl-dev \
         python3 \
         python3-dev \
@@ -22,10 +23,12 @@ RUN virtualenv -ppython3 /opt/slackbridge/venv \
     && /opt/slackbridge/venv/bin/pip install \
         -r /opt/slackbridge/requirements.txt
 
-COPY slackbridge.py /opt/slackbridge/
-
 COPY services /opt/slackbridge/services
 RUN chown -R nobody:nogroup /opt/slackbridge
+
+COPY slackbridge.py /opt/slackbridge/
+RUN chown nobody:nogroup /opt/slackbridge/slackbridge.py
+
 USER nobody
 
 WORKDIR /opt/slackbridge
