@@ -23,11 +23,12 @@ RUN virtualenv -ppython3 /opt/slackbridge/venv \
     && /opt/slackbridge/venv/bin/pip install \
         -r /opt/slackbridge/requirements.txt
 
-COPY services /opt/slackbridge/services
 RUN chown -R nobody:nogroup /opt/slackbridge
 
-COPY slackbridge.py /opt/slackbridge/
-RUN chown nobody:nogroup /opt/slackbridge/slackbridge.py
+COPY slackbridge /opt/slackbridge/slackbridge
+COPY services /opt/slackbridge/services
+RUN chown -R nobody:nogroup /opt/slackbridge/slackbridge
+RUN chown -R nobody:nogroup /opt/slackbridge/services
 
 USER nobody
 
