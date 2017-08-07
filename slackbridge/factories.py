@@ -7,12 +7,12 @@ from slackbridge.bots import BridgeBot
 class BotFactory(ReconnectingClientFactory):
 
     def clientConnectionLost(self, connector, reason):
-        log.msg('Lost connection.  Reason: {}'.format(reason))
-        super().clientConnectionLost(self, connector, reason)
+        log.err('Lost connection.  Reason: {}'.format(reason))
+        super().clientConnectionLost(connector, reason)
 
     def clientConnectionFailed(self, connector, reason):
-        log.msg('Connection failed. Reason: {}'.format(reason))
-        super().clientConnectionFailed(self, connector, reason)
+        log.err('Connection failed. Reason: {}'.format(reason))
+        super().clientConnectionFailed(connector, reason)
 
 
 class BridgeBotFactory(BotFactory):

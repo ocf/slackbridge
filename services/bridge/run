@@ -1,5 +1,5 @@
 #!/bin/bash
-
 set -euxo pipefail
+exec 2>&1
 cd /opt/slackbridge
-exec /opt/slackbridge/venv/bin/python -m slackbridge.main
+exec python -m slackbridge.main

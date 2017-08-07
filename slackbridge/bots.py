@@ -6,19 +6,20 @@ import slackbridge.utils as utils
 IRC_NICKNAME = 'slack-bridge'
 
 
-class BridgeBot(irc.IRCClient):
+class IRCBot(irc.IRCClient):
+    pass
+
+
+class BridgeBot(IRCBot):
     nickname = IRC_NICKNAME
 
     def __init__(self, slack_client, nickserv_password, slack_uid, channels):
         self.topics = {}
+        self.user_bots = {}
         self.sc = slack_client
         self.nickserv_password = nickserv_password
         self.slack_uid = slack_uid
         self.slack_channels = channels
-
-    def connectionLost(self, reason):
-        log.msg('Connection lost with IRC server: {}'.format(reason))
-        super().connectionLost(self, reason)
 
     def signedOn(self):
         self.msg('NickServ', 'identify {}'.format(self.nickserv_password))
@@ -53,7 +54,7 @@ class BridgeBot(irc.IRCClient):
             log.msg(message)
 
 
-class UserBot(irc.IRCClient):
+class UserBot(IRCBot):
     # Not implemented yet, but this will be so that there is a bot per Slack
     # user, like with the current bridge
     pass

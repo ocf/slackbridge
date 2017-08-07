@@ -2,7 +2,6 @@ import argparse
 import sys
 from configparser import ConfigParser
 
-from ocflib.misc.mail import send_problem_report
 from slackclient import SlackClient
 from twisted.internet import reactor
 from twisted.internet import ssl
@@ -35,27 +34,31 @@ def main():
     slack_uid = conf.get('slack', 'user')
     sc = SlackClient(slack_token)
 
+    # Log everything to stdout, which will be passed to syslog by stdin2syslog
+    log.startLogging(sys.stdout)
+
     # Get all channels from Slack
     # TODO: Remove duplication between here and the user selection part
     # This should just be made into a generic Slack API call method
+    log.msg('Requesting list of channels from Slack...')
     results = sc.api_call('channels.list', exclude_archived=1)
     if results['ok']:
         channels = results['channels']
         slack_channel_names = [c['name'] for c in channels]
     else:
-        send_problem_report('Error fetching channels from Slack API')
+        log.err('Error fetching channels from Slack API')
         sys.exit(1)
 
     # Get all users from Slack
+    # log.msg('Requesting list of users from Slack...')
     # results = sc.api_call('users.list')
-    #  if results['ok']:
-    #     users = [m for m in results['members'] if not m['is_bot'] and not
-    #              m['deleted'] and m['name'] != 'slackbot']
-    #  else:
-    #     send_problem_report('Error fetching users from Slack API')
-    #     sys.exit(1)
-
-    log.startLogging(sys.stdout)
+    # if results['ok']:
+    #    # Select users, but don't select bots, deleted users, or slackbot
+    #    users = [m for m in results['members'] if not m['is_bot'] and not
+    #             m['deleted'] and m['name'] != 'slackbot']
+    # else:
+    #    log.err('Error fetching users from Slack API')
+    #    sys.exit(1)
 
     # Main IRC bot thread
     nickserv_pass = conf.get('irc', 'nickserv_pass')

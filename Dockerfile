@@ -25,6 +25,9 @@ RUN virtualenv -ppython3 /opt/slackbridge/venv \
 
 RUN chown -R nobody:nogroup /opt/slackbridge
 
+# Run these separate from the chown before so that when developing the docker
+# cached layers makes rebuilding faster since it doesn't have to chown the whole
+# project again (including vendored stuff)
 COPY slackbridge /opt/slackbridge/slackbridge
 COPY services /opt/slackbridge/services
 RUN chown -R nobody:nogroup /opt/slackbridge/slackbridge
@@ -33,5 +36,5 @@ RUN chown -R nobody:nogroup /opt/slackbridge/services
 USER nobody
 
 WORKDIR /opt/slackbridge
-
+ENV PATH=/opt/slackbridge/venv/bin:$PATH
 CMD ["runsvdir", "/opt/slackbridge/services"]
