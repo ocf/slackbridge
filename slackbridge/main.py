@@ -8,9 +8,9 @@ from twisted.internet import ssl
 from twisted.python import log
 
 from slackbridge.factories import BridgeBotFactory
-
-IRC_HOST = 'dev-irc.ocf.berkeley.edu'
-IRC_PORT = 6697
+from slackbridge.utils import IRC_HOST
+from slackbridge.utils import IRC_PORT
+from slackbridge.utils import slack_api
 
 
 def main():
@@ -41,31 +41,28 @@ def main():
     # TODO: Remove duplication between here and the user selection part
     # This should just be made into a generic Slack API call method
     log.msg('Requesting list of channels from Slack...')
-    results = sc.api_call('channels.list', exclude_archived=1)
-    if results['ok']:
-        channels = results['channels']
-        slack_channel_names = [c['name'] for c in channels]
-    else:
-        log.err('Error fetching channels from Slack API')
-        sys.exit(1)
+    results = slack_api(sc, 'channels.list', exclude_archives=1)
+    slack_channels = results['channels']
 
-    # Get all users from Slack
-    # log.msg('Requesting list of users from Slack...')
-    # results = sc.api_call('users.list')
-    # if results['ok']:
-    #    # Select users, but don't select bots, deleted users, or slackbot
-    #    users = [m for m in results['members'] if not m['is_bot'] and not
-    #             m['deleted'] and m['name'] != 'slackbot']
-    # else:
-    #    log.err('Error fetching users from Slack API')
-    #    sys.exit(1)
+    # Get all users from Slack, but don't select bots, deactivated users, or
+    # slackbot to have IRC bots
+    log.msg('Requesting list of users from Slack...')
+    results = slack_api(sc, 'users.list')
+    slack_users = [
+        m for m in results['members']
+        if not m['is_bot']
+        and not m['deleted']
+        and m['name'] != 'slackbot'
+    ]
 
     # Main IRC bot thread
     nickserv_pass = conf.get('irc', 'nickserv_pass')
     bridge_factory = BridgeBotFactory(
-        sc, nickserv_pass, slack_uid, slack_channel_names)
-    reactor.connectSSL(IRC_HOST, IRC_PORT, bridge_factory,
-                       ssl.ClientContextFactory())
+        sc, nickserv_pass, slack_uid, slack_channels, slack_users,
+    )
+    reactor.connectSSL(
+        IRC_HOST, IRC_PORT, bridge_factory, ssl.ClientContextFactory()
+    )
     reactor.run()
 
 
