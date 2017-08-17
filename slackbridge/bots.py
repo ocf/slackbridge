@@ -66,17 +66,33 @@ class BridgeBot(IRCBot):
     def check_slack_rtm(self):
         message = self.sc.rtm_read()
 
-        # TODO: This is horrible and should be cleaned up a lot
-        if message:
-            message = message[0]
-            log.msg(message)
-            if message['type'] == 'message' and 'bot_id' not in message:
-                for user_bot in self.user_bots:
-                    if user_bot.user_id == message['user']:
-                        for channel in self.slack_channels:
-                            if channel['id'] == message['channel']:
-                                user_bot.post_to_irc(
-                                    '#' + channel['name'], message['text'])
+        if not message:
+            return
+
+        message = message[0]
+        log.msg(message)
+        if (message['type'] != 'message' or
+                'user' not in message or
+                'bot_id' in message):
+            return
+
+        # TODO: This is pretty bad and should be cleaned up to use dictionaries
+        # and not have as many loops (especially not nested ones)
+        # Ticketed as https://github.com/ocf/slackbridge/issues/3
+        for user_bot in self.user_bots:
+            # Skip any users that are not the correct one
+            if user_bot.user_id != message['user']:
+                continue
+
+            for channel in self.slack_channels:
+                # Skip any channels that are not the right one
+                if channel['id'] != message['channel']:
+                    continue
+
+                return user_bot.post_to_irc(
+                    '#' + channel['name'],
+                    message['text']
+                )
 
 
 class UserBot(IRCBot):
