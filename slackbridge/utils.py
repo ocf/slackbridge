@@ -1,10 +1,16 @@
+import getpass
 import hashlib
 import sys
 
 from twisted.python import log
 
 GRAVATAR_URL = 'http://www.gravatar.com/avatar/{}?s=48&r=any&default=identicon'
-IRC_HOST = 'irc.ocf.berkeley.edu'
+
+if getpass.getuser() == 'nobody':
+    IRC_HOST = 'irc.ocf.berkeley.edu'
+else:
+    IRC_HOST = 'dev-irc.ocf.berkeley.edu'
+
 IRC_PORT = 6697
 
 
