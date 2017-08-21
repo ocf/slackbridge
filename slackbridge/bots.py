@@ -50,7 +50,7 @@ class BridgeBot(IRCBot):
         user_nick, _ = user.split('!')
 
         # Don't post to Slack if it came from a Slack bot
-        if not user_nick.endswith('-slack'):
+        if '-slack' not in user_nick:
             self.post_to_slack(user_nick, channel, message)
 
     def post_to_slack(self, user, channel, message):
