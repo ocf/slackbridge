@@ -50,7 +50,7 @@ class BridgeBot(IRCBot):
         user_nick, _ = user.split('!')
 
         # Don't post to Slack if it came from a Slack bot
-        if '-slack' not in user_nick:
+        if '-slack' not in user_nick and user_nick != 'defaultnick':
             self.post_to_slack(user_nick, channel, message)
 
     def post_to_slack(self, user, channel, message):
@@ -98,7 +98,7 @@ class BridgeBot(IRCBot):
 class UserBot(IRCBot):
 
     def __init__(self, nickname, user_id, channels):
-        self.nickname = '{}-slack'.format(nickname)
+        self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
         self.user_id = user_id
         self.channels = channels
         # TODO: Add real names

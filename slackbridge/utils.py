@@ -21,6 +21,21 @@ def user_to_gravatar(user):
     return GRAVATAR_URL.format(email_hash.hexdigest())
 
 
+def strip_nick(nick):
+    # This seems nicer than an ugly regex with a ton of escaping
+    allowed_chars = '_-\\[]{}^`|'
+
+    # Remove any characters that are not alphanumberic, an underscore, or not
+    # in the list of allowed characters
+
+    return ''.join([
+        c
+        if c.isalnum() or c in allowed_chars
+        else ''
+        for c in nick
+    ])
+
+
 def slack_api(slack_client, *args, **kwargs):
     results = slack_client.api_call(*args, **kwargs)
     if results['ok']:
