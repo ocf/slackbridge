@@ -61,6 +61,7 @@ class UserBotFactory(BotFactory):
 
     def buildProtocol(self, addr):
         p = UserBot(self.slack_user['name'],
+                    self.slack_user['real_name'],
                     self.slack_user['id'], self.channels)
         p.factory = self
         self.bridge_bot_factory.add_user_bot(p)

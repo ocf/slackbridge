@@ -84,11 +84,11 @@ class BridgeBot(IRCBot):
 
 class UserBot(IRCBot):
 
-    def __init__(self, nickname, user_id, channels):
+    def __init__(self, nickname, realname, user_id, channels):
         self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
+        self.realname = realname
         self.user_id = user_id
         self.channels = channels
-        # TODO: Add real names
 
     def log(self, method, message):
         full_message = '[{}]: {}'.format(self.nickname, message)
