@@ -72,7 +72,8 @@ class BridgeBot(IRCBot):
 
         message = message[0]
         log.msg(message)
-        if (message['type'] != 'message' or
+        if ('type' not in message or
+                message['type'] != 'message' or
                 'user' not in message or
                 'bot_id' in message):
             return
