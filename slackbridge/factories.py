@@ -56,8 +56,11 @@ class UserBotFactory(BotFactory):
     def __init__(self, bridge_bot_factory, slack_user, channels):
         self.bridge_bot_factory = bridge_bot_factory
         self.slack_user = slack_user
-        # TODO: Only join channels the user is in instead of all channels
-        self.channels = channels
+        self.channels = []
+
+        for channel in channels:
+            if slack_user['id'] in channel['members']:
+                self.channels.append(channel)
 
     def buildProtocol(self, addr):
         p = UserBot(self.slack_user['name'],
