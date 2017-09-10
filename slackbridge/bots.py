@@ -20,7 +20,8 @@ class BridgeBot(IRCBot):
         self.sc = sc
         self.nickserv_password = nickserv_pw
         self.slack_uid = slack_uid
-        self.slack_channels = channels
+        self.users = {bot.user_id: bot for bot in user_bots}
+        self.channels = {channel['id']: channel for channel in channels}
 
         # Attempt to connect to Slack RTM
         while not self.sc.rtm_connect():
@@ -39,7 +40,7 @@ class BridgeBot(IRCBot):
         self.msg('NickServ', 'identify {}'.format(self.nickserv_password))
         log.msg('Authenticated with NickServ')
 
-        for channel in self.slack_channels:
+        for channel in self.channels.values():
             log.msg('Joining #{}'.format(channel['name']))
             self.join('#{}'.format(channel['name']))
 
@@ -76,23 +77,9 @@ class BridgeBot(IRCBot):
                 'bot_id' in message):
             return
 
-        # TODO: This is pretty bad and should be cleaned up to use dictionaries
-        # and not have as many loops (especially not nested ones)
-        # Ticketed as https://github.com/ocf/slackbridge/issues/3
-        for user_bot in self.user_bots:
-            # Skip any users that are not the correct one
-            if user_bot.user_id != message['user']:
-                continue
-
-            for channel in self.slack_channels:
-                # Skip any channels that are not the right one
-                if channel['id'] != message['channel']:
-                    continue
-
-                return user_bot.post_to_irc(
-                    '#' + channel['name'],
-                    message['text']
-                )
+        user_bot = self.users[message['user']]
+        channel = self.channels[message['channel']]
+        return user_bot.post_to_irc('#' + channel['name'], message['text'])
 
 
 class UserBot(IRCBot):
