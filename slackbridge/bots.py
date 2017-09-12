@@ -78,9 +78,11 @@ class BridgeBot(IRCBot):
                 'bot_id' in message):
             return
 
-        user_bot = self.users[message['user']]
-        channel = self.channels[message['channel']]
-        return user_bot.post_to_irc('#' + channel['name'], message['text'])
+        if (message['user'] in self.users and
+                message['channel'] in self.channels):
+            user_bot = self.users[message['user']]
+            channel = self.channels[message['channel']]
+            return user_bot.post_to_irc('#' + channel['name'], message['text'])
 
 
 class UserBot(IRCBot):
