@@ -5,6 +5,9 @@ DOCKER_TAG = docker-push.ocf.berkeley.edu/slackbridge:$(DOCKER_REVISION)
 test: venv
 		venv/bin/pre-commit run --all-files
 
+dev: venv
+		venv/bin/python -m slackbridge.main
+
 venv: vendor/venv-update requirements.txt requirements-dev.txt
 		vendor/venv-update venv= -ppython3 venv install= -r requirements.txt -r requirements-dev.txt
 
