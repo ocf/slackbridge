@@ -1,6 +1,5 @@
-import time
-
 import re
+import time
 
 from twisted.internet.task import LoopingCall
 from twisted.python import log
@@ -117,10 +116,11 @@ class UserBot(IRCBot):
 
     def __format_message(self, message):
         match_name = re.search(r'<\@([A-Z0-9]{9,})\>', message)
-        if match_name: 
-            user_info = self.sc.api_call('users.info', user=match_name.group(1))
+        if match_name:
+            user_info = self.sc.api_call(
+                'users.info', user=match_name.group(1))
             if user_info['ok']:
-                target_nick = '{}-slack'.format(utils.strip_nick(user_info['user']['name']))
+                target_nick = '{}-slack'.format(
+                    utils.strip_nick(user_info['user']['name']))
                 return message.replace(match_name.group(0), target_nick)
         return message
-    
