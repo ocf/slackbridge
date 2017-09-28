@@ -80,7 +80,7 @@ class BridgeBot(IRCBot):
         if 'type' not in message:
             return
 
-        if message['type'] == 'prescence_change':
+        if message['type'] == 'presence_change':
             user_bot = self.users[message['user']]
             if message['presence'] == 'away':
                 user_bot.away()
