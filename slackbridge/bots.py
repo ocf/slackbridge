@@ -88,7 +88,9 @@ class BridgeBot(IRCBot):
                 user_bot.back()
             return
 
-        if message['type'] != 'message' or 'user' not in message or 'bot_id' in message:
+        if (message['type'] != 'message' or
+            'user' not in message or
+                'bot_id' in message):
             return
 
         if (message['user'] in self.users and
