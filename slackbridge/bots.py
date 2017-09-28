@@ -115,12 +115,14 @@ class UserBot(IRCBot):
         self.msg(channel, self.__format_message(message))
 
     def __format_message(self, message):
-        match_name = re.search(r'<\@([A-Z0-9]{9,})\>', message)
-        if match_name:
+        match_ids = re.findall(r'(<\@([A-Z0-9]{9,})\>)', message)
+        # If for some weird reason someone mentions the same person
+        # twice in one message, we avoid extra api calls
+        for replace, uid in set(match_ids):
             user_info = self.sc.api_call(
-                'users.info', user=match_name.group(1))
+                'users.info', user=uid)
             if user_info['ok']:
                 target_nick = '{}-slack'.format(
                     utils.strip_nick(user_info['user']['name']))
-                return message.replace(match_name.group(0), target_nick)
+                message = message.replace(replace, target_nick)
         return message
