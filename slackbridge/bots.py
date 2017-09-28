@@ -1,5 +1,7 @@
 import time
 
+import re
+
 from twisted.internet.task import LoopingCall
 from twisted.python import log
 from twisted.words.protocols import irc
@@ -8,16 +10,17 @@ import slackbridge.utils as utils
 
 
 class IRCBot(irc.IRCClient):
-    pass
+    def __init__(self, sc):
+        self.sc = sc
 
 
 class BridgeBot(IRCBot):
     nickname = 'slack-bridge'
 
     def __init__(self, sc, nickserv_pw, slack_uid, channels, user_bots):
+        super().__init__(sc)
         self.topics = {}
         self.user_bots = user_bots
-        self.sc = sc
         self.nickserv_password = nickserv_pw
         self.slack_uid = slack_uid
         self.users = {bot.user_id: bot for bot in user_bots}
@@ -91,7 +94,9 @@ class BridgeBot(IRCBot):
 
 class UserBot(IRCBot):
 
-    def __init__(self, nickname, realname, user_id, channels):
+    def __init__(self, sc, nickname, realname, user_id, channels):
+        super().__init__(sc)
+        self.topics = {}
         self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
         self.realname = realname
         self.user_id = user_id
@@ -108,4 +113,14 @@ class UserBot(IRCBot):
             self.join('#{}'.format(channel['name']))
 
     def post_to_irc(self, channel, message):
-        self.msg(channel, message)
+        self.msg(channel, self.__format_message(message))
+
+    def __format_message(self, message):
+        match_name = re.search(r'<\@([A-Z0-9]{9,})\>', message)
+        if match_name: 
+            user_info = self.sc.api_call('users.info', user=match_name.group(1))
+            if user_info['ok']:
+                target_nick = '{}-slack'.format(utils.strip_nick(user_info['user']['name']))
+                return message.replace(match_name.group(0), target_nick)
+        return message
+    

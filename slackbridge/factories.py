@@ -34,7 +34,7 @@ class BridgeBotFactory(BotFactory):
         # server and their own nicknames
         for user in users:
             user_factory = UserBotFactory(
-                self, user, channels,
+                slack_client, self, user, channels,
             )
             reactor.connectSSL(
                 IRC_HOST, IRC_PORT, user_factory, ssl.ClientContextFactory()
@@ -53,7 +53,8 @@ class BridgeBotFactory(BotFactory):
 
 class UserBotFactory(BotFactory):
 
-    def __init__(self, bridge_bot_factory, slack_user, channels):
+    def __init__(self, slack_client, bridge_bot_factory, slack_user, channels):
+        self.slack_client = slack_client
         self.bridge_bot_factory = bridge_bot_factory
         self.slack_user = slack_user
         self.channels = []
@@ -63,7 +64,8 @@ class UserBotFactory(BotFactory):
                 self.channels.append(channel)
 
     def buildProtocol(self, addr):
-        p = UserBot(self.slack_user['name'],
+        p = UserBot(self.slack_client,
+                    self.slack_user['name'],
                     self.slack_user['real_name'],
                     self.slack_user['id'], self.channels)
         p.factory = self
