@@ -9,15 +9,14 @@ import slackbridge.utils as utils
 
 
 class IRCBot(irc.IRCClient):
-    def __init__(self, sc):
-        self.sc = sc
+    pass
 
 
 class BridgeBot(IRCBot):
     nickname = 'slack-bridge'
 
     def __init__(self, sc, nickserv_pw, slack_uid, channels, user_bots):
-        super().__init__(sc)
+        self.sc = sc
         self.topics = {}
         self.user_bots = user_bots
         self.nickserv_password = nickserv_pw
@@ -93,12 +92,12 @@ class BridgeBot(IRCBot):
 
 class UserBot(IRCBot):
 
-    def __init__(self, sc, nickname, realname, user_id, channels):
-        super().__init__(sc)
+    def __init__(self, nickname, realname, user_id, users, channels):
         self.topics = {}
         self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
         self.realname = realname
         self.user_id = user_id
+        self.users = users
         self.channels = channels
 
     def log(self, method, message):
@@ -119,10 +118,10 @@ class UserBot(IRCBot):
         # If for some weird reason someone mentions the same person
         # twice in one message, we avoid extra api calls
         for replace, uid in set(match_ids):
-            user_info = self.sc.api_call(
-                'users.info', user=uid)
-            if user_info['ok']:
+            user_info = next(
+                (user for user in self.users if user['id'] == uid), None)
+            if user_info:
                 target_nick = '{}-slack'.format(
-                    utils.strip_nick(user_info['user']['name']))
+                    utils.strip_nick(user_info['name']))
                 message = message.replace(replace, target_nick)
         return message
