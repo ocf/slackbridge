@@ -89,7 +89,7 @@ class BridgeBot(IRCBot):
             return
 
         if (message['type'] != 'message' or
-            'user' not in message or
+                'user' not in message or
                 'bot_id' in message):
             return
 
