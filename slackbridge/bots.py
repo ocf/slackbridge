@@ -76,8 +76,19 @@ class BridgeBot(IRCBot):
 
         message = message[0]
         log.msg(message)
-        if ('type' not in message or
-                message['type'] != 'message' or
+
+        if 'type' not in message:
+            return
+
+        if message['type'] == 'presence_change':
+            user_bot = self.users[message['user']]
+            if message['presence'] == 'away':
+                user_bot.away()
+            elif message['presence'] == 'active':
+                user_bot.back()
+            return
+
+        if (message['type'] != 'message' or
                 'user' not in message or
                 'bot_id' in message):
             return
