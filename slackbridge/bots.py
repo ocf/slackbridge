@@ -119,7 +119,7 @@ class UserBot(IRCBot):
             self.log(log.msg, 'Joining #{}'.format(channel['name']))
             self.join('#{}'.format(channel['name']))
 
-        self.away("Default away for startup.")
+        self.away('Default away for startup.')
 
     def post_to_irc(self, channel, message):
         self.msg(channel, message)
