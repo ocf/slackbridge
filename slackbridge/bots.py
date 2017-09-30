@@ -84,7 +84,7 @@ class BridgeBot(IRCBot):
                 message['user'] in self.users):
             user_bot = self.users[message['user']]
             if message['presence'] == 'away':
-                user_bot.away()
+                user_bot.away('Slack user inactive.')
             elif message['presence'] == 'active':
                 user_bot.back()
             return
