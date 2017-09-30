@@ -4,6 +4,7 @@ from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.python import log
 
 from slackbridge.bots import BridgeBot
+from slackbridge.bots import IRCBot
 from slackbridge.bots import UserBot
 from slackbridge.utils import IRC_HOST
 from slackbridge.utils import IRC_PORT
@@ -30,11 +31,14 @@ class BridgeBotFactory(BotFactory):
         self.bot_class = BridgeBot
         self.user_bots = []
 
+        # Give all bots access to the slack userlist
+        IRCBot.users = users
+
         # Create individual user bots with their own connections to the IRC
         # server and their own nicknames
         for user in users:
             user_factory = UserBotFactory(
-                self, user, users, channels,
+                self, user, channels,
             )
             reactor.connectSSL(
                 IRC_HOST, IRC_PORT, user_factory, ssl.ClientContextFactory()
@@ -53,10 +57,9 @@ class BridgeBotFactory(BotFactory):
 
 class UserBotFactory(BotFactory):
 
-    def __init__(self, bridge_bot_factory, slack_user, users, channels):
+    def __init__(self, bridge_bot_factory, slack_user, channels):
         self.bridge_bot_factory = bridge_bot_factory
         self.slack_user = slack_user
-        self.users = users
         self.channels = []
 
         for channel in channels:
@@ -67,7 +70,7 @@ class UserBotFactory(BotFactory):
         p = UserBot(self.slack_user['name'],
                     self.slack_user['real_name'],
                     self.slack_user['id'],
-                    self.users, self.channels)
+                    self.channels)
         p.factory = self
         self.bridge_bot_factory.add_user_bot(p)
         self.resetDelay()

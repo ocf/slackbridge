@@ -92,12 +92,11 @@ class BridgeBot(IRCBot):
 
 class UserBot(IRCBot):
 
-    def __init__(self, nickname, realname, user_id, users, channels):
+    def __init__(self, nickname, realname, user_id, channels):
         self.topics = {}
         self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
         self.realname = realname
         self.user_id = user_id
-        self.users = users
         self.channels = channels
 
     def log(self, method, message):
@@ -111,17 +110,20 @@ class UserBot(IRCBot):
             self.join('#{}'.format(channel['name']))
 
     def post_to_irc(self, channel, message):
-        self.msg(channel, self.__format_message(message))
+        self.msg(channel, self._format_message(message))
 
-    def __format_message(self, message):
+    def _format_message(self, message):
         match_ids = re.findall(r'(<\@([A-Z0-9]{9,})\>)', message)
-        # If for some weird reason someone mentions the same person
-        # twice in one message, we avoid extra api calls
+        # Avoid duplicate searches for multiple users mentions
+        # in the same Slack message.
         for replace, uid in set(match_ids):
             user_info = next(
-                (user for user in self.users if user['id'] == uid), None)
+                (user for user in self.users if user['id'] == uid),
+                None,
+            )
             if user_info:
                 target_nick = '{}-slack'.format(
-                    utils.strip_nick(user_info['name']))
+                    utils.strip_nick(user_info['name']),
+                )
                 message = message.replace(replace, target_nick)
         return message
