@@ -32,7 +32,7 @@ class BridgeBotFactory(BotFactory):
         self.user_bots = []
 
         # Give all bots access to the slack userlist
-        IRCBot.users = users
+        IRCBot.slack_users = users
 
         # Create individual user bots with their own connections to the IRC
         # server and their own nicknames

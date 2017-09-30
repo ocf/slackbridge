@@ -118,7 +118,7 @@ class UserBot(IRCBot):
         # in the same Slack message.
         for replace, uid in set(match_ids):
             user_info = next(
-                (user for user in self.users if user['id'] == uid),
+                (user for user in self.slack_users if user['id'] == uid),
                 None,
             )
             if user_info:
