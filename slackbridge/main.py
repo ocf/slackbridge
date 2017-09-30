@@ -57,8 +57,10 @@ def main():
 
     # Main IRC bot thread
     nickserv_pass = conf.get('irc', 'nickserv_pass')
+    bridge_nickname = 'slack-bridge'
     bridge_factory = BridgeBotFactory(
-        sc, nickserv_pass, slack_uid, slack_channels, slack_users,
+        sc, bridge_nickname, nickserv_pass, slack_uid,
+        slack_channels, slack_users,
     )
     reactor.connectSSL(
         IRC_HOST, IRC_PORT, bridge_factory, ssl.ClientContextFactory()
