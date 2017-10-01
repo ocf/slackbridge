@@ -1,3 +1,4 @@
+import re
 import time
 
 from twisted.internet.task import LoopingCall
@@ -15,9 +16,8 @@ class BridgeBot(IRCBot):
 
     def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid, channels,
                  user_bots):
-        self.topics = {}
-        self.user_bots = user_bots
         self.sc = sc
+        self.user_bots = user_bots
         self.nickserv_password = nickserv_pw
         self.slack_uid = slack_uid
         self.users = {bot.user_id: bot for bot in user_bots}
@@ -110,7 +110,7 @@ class UserBot(IRCBot):
         self.realname = realname
         self.user_id = user_id
         self.channels = channels
-        self.nickserv_passowrd = nickserv_pw
+        self.nickserv_password = nickserv_pw
         self.target_group_nick = target_group
 
     def log(self, method, message):
@@ -119,10 +119,10 @@ class UserBot(IRCBot):
 
     def signedOn(self):
         # If already registered, auth in
-        self.msg('NickServ', 'IDENTIFY {}'.format(self.nickserv_passowrd))
+        self.msg('NickServ', 'IDENTIFY {}'.format(self.nickserv_password))
         # And if not, register for the first time
         self.msg('NickServ', 'GROUP {} {}'.format(self.target_group_nick,
-                                                  self.nickserv_passowrd))
+                                                  self.nickserv_password))
         for channel in self.channels:
             self.log(log.msg, 'Joining #{}'.format(channel['name']))
             self.join('#{}'.format(channel['name']))
@@ -130,4 +130,20 @@ class UserBot(IRCBot):
         self.away('Default away for startup.')
 
     def post_to_irc(self, channel, message):
-        self.msg(channel, message)
+        self.msg(channel, self._format_message(message))
+
+    def _format_message(self, message):
+        match_ids = re.findall(r'(<\@([A-Z0-9]{9,})\>)', message)
+        # Avoid duplicate searches for multiple users mentions
+        # in the same Slack message.
+        for replace, uid in set(match_ids):
+            user_info = next(
+                (user for user in self.slack_users if user['id'] == uid),
+                None,
+            )
+            if user_info:
+                target_nick = '{}-slack'.format(
+                    utils.strip_nick(user_info['name']),
+                )
+                message = message.replace(replace, target_nick)
+        return message
