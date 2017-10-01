@@ -39,15 +39,7 @@ class BridgeBotFactory(BotFactory):
         # Create individual user bots with their own connections to the IRC
         # server and their own nicknames
         for user in users:
-            user_factory = UserBotFactory(
-                self, user,
-                self.channels,
-                self.bridge_nickname,
-                self.nickserv_password,
-            )
-            reactor.connectSSL(
-                IRC_HOST, IRC_PORT, user_factory, ssl.ClientContextFactory()
-            )
+            self.instantiate_bot(user)
 
     def buildProtocol(self, addr):
         p = BridgeBot(
@@ -64,6 +56,17 @@ class BridgeBotFactory(BotFactory):
 
     def add_user_bot(self, user_bot):
         self.user_bots.append(user_bot)
+
+    def instantiate_bot(self, user):
+        user_factory = UserBotFactory(
+            self, user,
+            self.channels,
+            self.bridge_nickname,
+            self.nickserv_password,
+        )
+        reactor.connectSSL(
+            IRC_HOST, IRC_PORT, user_factory, ssl.ClientContextFactory()
+        )
 
 
 class UserBotFactory(BotFactory):

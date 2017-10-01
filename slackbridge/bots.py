@@ -89,6 +89,10 @@ class BridgeBot(IRCBot):
             elif message['presence'] == 'active':
                 user_bot.back()
             return
+        elif (message['type'] == 'team_join'):
+            self.slack_users.append(message['user'])
+            self.factory.instantiate_bot(message['user'])
+            return
 
         if (message['type'] != 'message' or
                 'user' not in message or
