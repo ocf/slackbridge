@@ -4,6 +4,7 @@ from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.python import log
 
 from slackbridge.bots import BridgeBot
+from slackbridge.bots import IRCBot
 from slackbridge.bots import UserBot
 from slackbridge.utils import IRC_HOST
 from slackbridge.utils import IRC_PORT
@@ -31,6 +32,9 @@ class BridgeBotFactory(BotFactory):
         self.channels = channels
         self.bot_class = BridgeBot
         self.user_bots = []
+
+        # Give all bots access to the slack userlist
+        IRCBot.slack_users = users
 
         # Create individual user bots with their own connections to the IRC
         # server and their own nicknames
