@@ -13,16 +13,16 @@ class IRCBot(irc.IRCClient):
 
 
 class BridgeBot(IRCBot):
-    nickname = 'slack-bridge'
 
-    def __init__(self, sc, nickserv_pw, slack_uid, channels, user_bots):
-        self.sc = sc
+    def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid, channels,
+                 user_bots):
         self.topics = {}
         self.user_bots = user_bots
         self.nickserv_password = nickserv_pw
         self.slack_uid = slack_uid
         self.users = {bot.user_id: bot for bot in user_bots}
         self.channels = {channel['id']: channel for channel in channels}
+        self.nickname = bridge_nick
 
         # Attempt to connect to Slack RTM
         while not self.sc.rtm_connect():
@@ -77,8 +77,20 @@ class BridgeBot(IRCBot):
 
         message = message[0]
         log.msg(message)
-        if ('type' not in message or
-                message['type'] != 'message' or
+
+        if 'type' not in message:
+            return
+
+        if (message['type'] == 'presence_change' and
+                message['user'] in self.users):
+            user_bot = self.users[message['user']]
+            if message['presence'] == 'away':
+                user_bot.away('Slack user inactive.')
+            elif message['presence'] == 'active':
+                user_bot.back()
+            return
+
+        if (message['type'] != 'message' or
                 'user' not in message or
                 'bot_id' in message):
             return
@@ -92,22 +104,30 @@ class BridgeBot(IRCBot):
 
 class UserBot(IRCBot):
 
-    def __init__(self, nickname, realname, user_id, channels):
-        self.topics = {}
+    def __init__(self, nickname, realname, user_id, channels,
+                 target_group, nickserv_pw):
         self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
         self.realname = realname
         self.user_id = user_id
         self.channels = channels
+        self.nickserv_passowrd = nickserv_pw
+        self.target_group_nick = target_group
 
     def log(self, method, message):
         full_message = '[{}]: {}'.format(self.nickname, message)
         return method(full_message)
 
     def signedOn(self):
-        # TODO: Add NickServ authentication for these bots too?
+        # If already registered, auth in
+        self.msg('NickServ', 'IDENTIFY {}'.format(self.nickserv_passowrd))
+        # And if not, register for the first time
+        self.msg('NickServ', 'GROUP {} {}'.format(self.target_group_nick,
+                                                  self.nickserv_passowrd))
         for channel in self.channels:
             self.log(log.msg, 'Joining #{}'.format(channel['name']))
             self.join('#{}'.format(channel['name']))
+
+        self.away('Default away for startup.')
 
     def post_to_irc(self, channel, message):
         self.msg(channel, self._format_message(message))

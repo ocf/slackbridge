@@ -23,9 +23,11 @@ class BotFactory(ReconnectingClientFactory):
 
 class BridgeBotFactory(BotFactory):
 
-    def __init__(self, slack_client, nickserv_pw, slack_uid, channels, users):
+    def __init__(self, slack_client, bridge_nick, nickserv_pw, slack_uid,
+                 channels, users):
         self.slack_client = slack_client
         self.slack_uid = slack_uid
+        self.bridge_nickname = bridge_nick
         self.nickserv_password = nickserv_pw
         self.channels = channels
         self.bot_class = BridgeBot
@@ -38,15 +40,24 @@ class BridgeBotFactory(BotFactory):
         # server and their own nicknames
         for user in users:
             user_factory = UserBotFactory(
-                self, user, channels,
+                self, user,
+                self.channels,
+                self.bridge_nickname,
+                self.nickserv_password,
             )
             reactor.connectSSL(
                 IRC_HOST, IRC_PORT, user_factory, ssl.ClientContextFactory()
             )
 
     def buildProtocol(self, addr):
-        p = BridgeBot(self.slack_client, self.nickserv_password,
-                      self.slack_uid, self.channels, self.user_bots)
+        p = BridgeBot(
+            self.slack_client,
+            self.bridge_nickname,
+            self.nickserv_password,
+            self.slack_uid,
+            self.channels,
+            self.user_bots,
+        )
         p.factory = self
         self.resetDelay()
         return p
@@ -57,20 +68,27 @@ class BridgeBotFactory(BotFactory):
 
 class UserBotFactory(BotFactory):
 
-    def __init__(self, bridge_bot_factory, slack_user, channels):
+    def __init__(self, bridge_bot_factory, slack_user, channels,
+                 target_group, nickserv_pw):
         self.bridge_bot_factory = bridge_bot_factory
         self.slack_user = slack_user
         self.channels = []
+        self.target_group_nick = target_group
+        self.nickserv_password = nickserv_pw
 
         for channel in channels:
             if slack_user['id'] in channel['members']:
                 self.channels.append(channel)
 
     def buildProtocol(self, addr):
-        p = UserBot(self.slack_user['name'],
-                    self.slack_user['real_name'],
-                    self.slack_user['id'],
-                    self.channels)
+        p = UserBot(
+            self.slack_user['name'],
+            self.slack_user['real_name'],
+            self.slack_user['id'],
+            self.channels,
+            self.target_group_nick,
+            self.nickserv_password,
+        )
         p.factory = self
         self.bridge_bot_factory.add_user_bot(p)
         self.resetDelay()
