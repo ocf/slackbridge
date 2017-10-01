@@ -16,7 +16,7 @@ class BridgeBot(IRCBot):
 
     def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid, channels,
                  user_bots):
-        self.topics = {}
+        self.sc = sc
         self.user_bots = user_bots
         self.nickserv_password = nickserv_pw
         self.slack_uid = slack_uid
@@ -110,7 +110,7 @@ class UserBot(IRCBot):
         self.realname = realname
         self.user_id = user_id
         self.channels = channels
-        self.nickserv_passowrd = nickserv_pw
+        self.nickserv_password = nickserv_pw
         self.target_group_nick = target_group
 
     def log(self, method, message):
@@ -119,10 +119,10 @@ class UserBot(IRCBot):
 
     def signedOn(self):
         # If already registered, auth in
-        self.msg('NickServ', 'IDENTIFY {}'.format(self.nickserv_passowrd))
+        self.msg('NickServ', 'IDENTIFY {}'.format(self.nickserv_password))
         # And if not, register for the first time
         self.msg('NickServ', 'GROUP {} {}'.format(self.target_group_nick,
-                                                  self.nickserv_passowrd))
+                                                  self.nickserv_password))
         for channel in self.channels:
             self.log(log.msg, 'Joining #{}'.format(channel['name']))
             self.join('#{}'.format(channel['name']))
