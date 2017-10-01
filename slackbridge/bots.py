@@ -1,4 +1,3 @@
-import re
 import time
 
 from twisted.internet.task import LoopingCall
@@ -18,6 +17,7 @@ class BridgeBot(IRCBot):
                  user_bots):
         self.topics = {}
         self.user_bots = user_bots
+        self.sc = sc
         self.nickserv_password = nickserv_pw
         self.slack_uid = slack_uid
         self.users = {bot.user_id: bot for bot in user_bots}
@@ -130,20 +130,4 @@ class UserBot(IRCBot):
         self.away('Default away for startup.')
 
     def post_to_irc(self, channel, message):
-        self.msg(channel, self._format_message(message))
-
-    def _format_message(self, message):
-        match_ids = re.findall(r'(<\@([A-Z0-9]{9,})\>)', message)
-        # Avoid duplicate searches for multiple users mentions
-        # in the same Slack message.
-        for replace, uid in set(match_ids):
-            user_info = next(
-                (user for user in self.slack_users if user['id'] == uid),
-                None,
-            )
-            if user_info:
-                target_nick = '{}-slack'.format(
-                    utils.strip_nick(user_info['name']),
-                )
-                message = message.replace(replace, target_nick)
-        return message
+        self.msg(channel, message)
