@@ -80,28 +80,36 @@ class BridgeBot(IRCBot):
         message = message[0]
         log.msg(message)
 
-        if 'type' not in message:
+        if ('type' not in message or
+                'user' not in message or
+                'bot_id' in message):
             return
 
-        if (message['type'] == 'presence_change' and
-                message['user'] in self.users):
-            user_bot = self.users[message['user']]
+        if message['type'] == 'team_join':
+            IRCBot.slack_users.append(message['user'])
+            self.factory.instantiate_bot(message['user'])
+            return
+
+        if message['user'] not in self.users:
+            return
+        user_bot = self.users[message['user']]
+
+        if message['type'] == 'presence_change':
             if message['presence'] == 'away':
                 user_bot.away('Slack user inactive.')
             elif message['presence'] == 'active':
                 user_bot.back()
             return
 
-        if (message['type'] != 'message' or
-                'user' not in message or
-                'bot_id' in message):
-            return
-
-        if (message['user'] in self.users and
-                message['channel'] in self.channels):
-            user_bot = self.users[message['user']]
+        if message['channel'] in self.channels:
             channel = self.channels[message['channel']]
-            return user_bot.post_to_irc('#' + channel['name'], message['text'])
+            if message['type'] == 'message':
+                return user_bot.post_to_irc('#' + channel['name'],
+                                            message['text'])
+            elif message['type'] == 'member_joined_channel':
+                return user_bot.join_channel(channel['name'])
+            elif message['type'] == 'member_left_channel':
+                return user_bot.part_channel(channel['name'])
 
     # Implements the IRCClient event handler of the same name,
     # which gets called when the topic changes, or when
@@ -140,9 +148,15 @@ class UserBot(IRCBot):
                                                   self.nickserv_password))
         for channel in self.channels:
             self.log(log.msg, 'Joining #{}'.format(channel['name']))
-            self.join('#{}'.format(channel['name']))
+            self.join_channel(channel['name'])
 
         self.away('Default away for startup.')
+
+    def join_channel(self, channel_name):
+        self.join('#{}'.format(channel_name))
+
+    def part_channel(self, channel_name):
+        self.leave('#{}'.format(channel_name))
 
     def post_to_irc(self, channel, message):
         self.msg(channel, self._format_message(message))
