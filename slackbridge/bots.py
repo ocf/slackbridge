@@ -22,6 +22,8 @@ class BridgeBot(IRCBot):
         self.slack_uid = slack_uid
         self.users = {bot.user_id: bot for bot in user_bots}
         self.channels = {channel['id']: channel for channel in channels}
+        self.channel_name_uid_map = {channel['name']: channel['id']
+                                     for channel in channels}
         self.nickname = bridge_nick
 
         # Attempt to connect to Slack RTM
@@ -100,6 +102,19 @@ class BridgeBot(IRCBot):
             user_bot = self.users[message['user']]
             channel = self.channels[message['channel']]
             return user_bot.post_to_irc('#' + channel['name'], message['text'])
+
+    # Implements the IRCClient event handler of the same name,
+    # which gets called when the topic changes, or when
+    # a channel is entered for the first time.
+    def topicUpdated(self, user, channel, new_topic):
+        channel_uid = self.channel_name_uid_map[channel[1:]]
+        last_topic = self.channels[channel_uid]['topic']['value']
+        if new_topic != last_topic:
+            self.sc.api_call(
+                'channels.setTopic',
+                channel=channel_uid,
+                topic=new_topic
+            )
 
 
 class UserBot(IRCBot):
