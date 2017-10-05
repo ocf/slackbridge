@@ -103,14 +103,14 @@ class BridgeBot(IRCBot):
             channel = self.channels[message['channel']]
             return user_bot.post_to_irc('#' + channel['name'], message['text'])
 
-    def topicUpdated(self, user, channel, newTopic):
+    def topicUpdated(self, user, channel, new_topic):
         channel_uid = self.channel_name_uid_map[channel[1:]]
         last_topic = self.channels[channel_uid]['topic']['value']
-        if newTopic != last_topic:
+        if new_topic != last_topic:
             self.sc.api_call(
                 'channels.setTopic',
                 channel=channel_uid,
-                topic=newTopic
+                topic=new_topic
             )
 
 
