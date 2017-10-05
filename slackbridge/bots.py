@@ -103,6 +103,9 @@ class BridgeBot(IRCBot):
             channel = self.channels[message['channel']]
             return user_bot.post_to_irc('#' + channel['name'], message['text'])
 
+    # Implements the IRCClient event handler of the same name,
+    # which gets called when the topic changes, or when
+    # a channel is entered for the first time.
     def topicUpdated(self, user, channel, new_topic):
         channel_uid = self.channel_name_uid_map[channel[1:]]
         last_topic = self.channels[channel_uid]['topic']['value']
