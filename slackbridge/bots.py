@@ -26,10 +26,7 @@ class BridgeBot(IRCBot):
                                      for channel in channels}
         self.nickname = bridge_nick
 
-        # Attempt to connect to Slack RTM
-        while not self.sc.rtm_connect():
-            log.err('Could not connect to Slack RTM, check token/rate limits')
-            time.sleep(5)
+        self.rtm_connect()
 
         log.msg('Connected successfully to Slack RTM')
 
@@ -38,6 +35,12 @@ class BridgeBot(IRCBot):
         # Slack's rate limit is 1 request per second, so set this to something
         # greater than or equal to that to avoid problems
         loop.start(1)
+
+    def rtm_connect(self):
+        # Attempt to connect to Slack RTM
+        while not self.sc.rtm_connect():
+            log.err('Could not connect to Slack RTM, check token/rate limits')
+            time.sleep(5)
 
     def signedOn(self):
         self.msg('NickServ', 'identify {}'.format(self.nickserv_password))
@@ -72,7 +75,8 @@ class BridgeBot(IRCBot):
             message = self.sc.rtm_read()
         except TimeoutError:
             log.err('Retrieving message from Slack RTM timed out')
-            message = None
+            self.rtm_connect()
+            return
 
         if not message:
             return
