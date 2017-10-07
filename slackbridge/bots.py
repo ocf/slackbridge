@@ -101,6 +101,9 @@ class BridgeBot(IRCBot):
                 user_bot.back()
             return
 
+        if 'channel' not in message:
+            return
+
         if message['channel'] in self.channels:
             channel = self.channels[message['channel']]
             if message['type'] == 'message':
