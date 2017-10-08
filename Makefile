@@ -2,28 +2,29 @@ DOCKER_REVISION ?= testing-$(USER)
 DOCKER_TAG = docker-push.ocf.berkeley.edu/slackbridge:$(DOCKER_REVISION)
 
 .PHONY: test
-test: venv
+test: venv install-hooks
 		venv/bin/pre-commit run --all-files
 
 .PHONY: dev
 dev: venv
 		venv/bin/python -m slackbridge.main
 
+.PHONY: install-hooks
+install-hooks: venv
+		venv/bin/pre-commit install -f --install-hooks
+
 venv: vendor/venv-update requirements.txt requirements-dev.txt
-		vendor/venv-update venv= -ppython3 venv install= -r requirements.txt -r requirements-dev.txt
+		vendor/venv-update \
+				venv= -ppython3 venv \
+				install= -r requirements.txt -r requirements-dev.txt
 
 .PHONY: clean
 clean:
 		rm -rf venv
 
 .PHONY: update-requirements
-update-requirements:
-		$(eval TMP := $(shell mktemp -d))
-		python ./vendor/venv-update venv= $(TMP) -ppython3 install= -r requirements.txt
-		. $(TMP)/bin/activate && \
-				pip install --upgrade pip && \
-				pip freeze | sed 's/^ocflib==.*/ocflib/' > requirements.txt
-		rm -rf $(TMP)
+update-requirements: venv
+		venv/bin/upgrade-requirements
 
 .PHONY: cook-image
 cook-image:
