@@ -5,6 +5,7 @@ DOCKER_TAG = docker-push.ocf.berkeley.edu/slackbridge:$(DOCKER_REVISION)
 test: venv
 		venv/bin/pre-commit run --all-files
 
+.PHONY: dev
 dev: venv
 		venv/bin/python -m slackbridge.main
 
