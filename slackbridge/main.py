@@ -12,6 +12,8 @@ from slackbridge.utils import IRC_HOST
 from slackbridge.utils import IRC_PORT
 from slackbridge.utils import slack_api
 
+BRIDGE_NICKNAME = 'slack-bridge'
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -57,9 +59,8 @@ def main():
 
     # Main IRC bot thread
     nickserv_pass = conf.get('irc', 'nickserv_pass')
-    bridge_nickname = 'slack-bridge'
     bridge_factory = BridgeBotFactory(
-        sc, bridge_nickname, nickserv_pass, slack_uid,
+        sc, BRIDGE_NICKNAME, nickserv_pass, slack_uid,
         slack_channels, slack_users,
     )
     reactor.connectSSL(

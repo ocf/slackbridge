@@ -1,3 +1,5 @@
+import functools
+import queue
 import re
 import time
 
@@ -14,6 +16,85 @@ class IRCBot(irc.IRCClient):
 
 class BridgeBot(IRCBot):
 
+    @functools.total_ordering
+    class SlackMessage:
+        def __init__(self, raw_message, bridge_bot):
+            self.raw_message = raw_message
+            self.channels = bridge_bot.channels
+            self.users = bridge_bot.users
+            if 'ts' in raw_message:
+                self.timestamp = float(raw_message['ts'])
+            else:
+                self.timestamp = time.time()
+
+        def resolve(self):
+            if ('type' not in self.raw_message or
+                    'user' not in self.raw_message or
+                    'bot_id' in self.raw_message):
+                return
+
+            message_type = self.raw_message['type']
+
+            if self.raw_message['type'] == 'team_join':
+                self._create_irc_bot(self.raw_message['user'])
+                return
+
+            if self.raw_message['user'] not in self.users:
+                return
+
+            user_bot = self.users[self.raw_message['user']]
+
+            if message_type == 'presence_change':
+                self._change_presence(user_bot)
+                return
+
+            if 'channel' not in self.raw_message:
+                return
+
+            if self.raw_message['channel'] in self.channels:
+                if message_type == 'message':
+                    self._post_to_irc(user_bot)
+                elif message_type == 'member_joined_channel':
+                    self._join_channel(user_bot)
+                elif message_type == 'member_left_channel':
+                    self._part_channel(user_bot)
+                return
+
+        def _create_irc_bot(self, user):
+            IRCBot.slack_users.append(user)
+            self.bridge_bot.factory.instantiate_bot(user)
+
+        def _change_presence(self, user_bot):
+            if self.raw_message['presence'] == 'away':
+                user_bot.away('Slack user inactive.')
+            elif self.raw_message['presence'] == 'active':
+                user_bot.back()
+
+        def _post_to_irc(self, user_bot):
+            channel = self.channels[self.raw_message['channel']]
+            user_bot.post_to_irc(
+                '#' + channel['name'], self.raw_message['text'])
+
+        def _join_channel(self, user_bot):
+            channel = self.channels[self.raw_message['channel']]
+            user_bot.join_channel(channel['name'])
+
+        def _part_channel(self, user_bot):
+            channel = self.channels[self.raw_message['channel']]
+            user_bot.part_channel(channel['name'])
+
+        # For PriorityQueue to order by timestamp, override comparisons.
+        # @total_ordering generates the other comparisons given the two below.
+        def __lt__(self, other):
+            if not hasattr(other, 'timestamp'):
+                return NotImplemented
+            return self.timestamp < other.timestamp
+
+        def __eq__(self, other):
+            if not hasattr(other, 'timestamp'):
+                return NotImplemented
+            return self.timestamp == other.timestamp
+
     def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid, channels,
                  user_bots):
         self.sc = sc
@@ -25,16 +106,21 @@ class BridgeBot(IRCBot):
         self.channel_name_uid_map = {channel['name']: channel['id']
                                      for channel in channels}
         self.nickname = bridge_nick
+        self.message_queue = queue.PriorityQueue()
 
         self.rtm_connect()
 
         log.msg('Connected successfully to Slack RTM')
 
         # Create a looping call to poll Slack for updates
-        loop = LoopingCall(self.check_slack_rtm)
+        rtm_loop = LoopingCall(self.check_slack_rtm)
         # Slack's rate limit is 1 request per second, so set this to something
         # greater than or equal to that to avoid problems
-        loop.start(1)
+        rtm_loop.start(1)
+
+        # Create another looping call which acts on messages in the queue
+        message_loop = LoopingCall(self.empty_queue)
+        message_loop.start(0.5)
 
     def rtm_connect(self):
         # Attempt to connect to Slack RTM
@@ -72,51 +158,26 @@ class BridgeBot(IRCBot):
 
     def check_slack_rtm(self):
         try:
-            message = self.sc.rtm_read()
+            message_list = self.sc.rtm_read()
         except TimeoutError:
             log.err('Retrieving message from Slack RTM timed out')
             self.rtm_connect()
             return
 
-        if not message:
+        if not message_list:
             return
 
-        message = message[0]
-        log.msg(message)
+        for message in message_list:
+            log.msg(message)
 
-        if ('type' not in message or
-                'user' not in message or
-                'bot_id' in message):
-            return
+            if 'type' in message:
+                message_obj = self.SlackMessage(message, self)
+                self.message_queue.put(message_obj)
 
-        if message['type'] == 'team_join':
-            IRCBot.slack_users.append(message['user'])
-            self.factory.instantiate_bot(message['user'])
-            return
-
-        if message['user'] not in self.users:
-            return
-        user_bot = self.users[message['user']]
-
-        if message['type'] == 'presence_change':
-            if message['presence'] == 'away':
-                user_bot.away('Slack user inactive.')
-            elif message['presence'] == 'active':
-                user_bot.back()
-            return
-
-        if 'channel' not in message:
-            return
-
-        if message['channel'] in self.channels:
-            channel = self.channels[message['channel']]
-            if message['type'] == 'message':
-                return user_bot.post_to_irc('#' + channel['name'],
-                                            message['text'])
-            elif message['type'] == 'member_joined_channel':
-                return user_bot.join_channel(channel['name'])
-            elif message['type'] == 'member_left_channel':
-                return user_bot.part_channel(channel['name'])
+    def empty_queue(self):
+        while not self.message_queue.empty():
+            message = self.message_queue.get()
+            message.resolve()
 
     # Implements the IRCClient event handler of the same name,
     # which gets called when the topic changes, or when
