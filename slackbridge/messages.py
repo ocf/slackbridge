@@ -1,4 +1,7 @@
 import functools
+import re
+import shutil
+import tempfile
 import time
 
 from twisted.python import log
@@ -15,9 +18,10 @@ IGNORED_MSG_SUBTYPES = (
 
 @functools.total_ordering
 class SlackMessage:
-    def __init__(self, raw_message, bridge_bot):
+    def __init__(self, raw_message, bridge_bot, imgur):
         self.raw_message = raw_message
         self.bridge_bot = bridge_bot
+        self.imgur = imgur
 
         if 'ts' in raw_message:
             self.timestamp = float(raw_message['ts'])
@@ -60,9 +64,9 @@ class SlackMessage:
                         return
                     if subtype == 'me_message':
                         return self._irc_me_action(channel_name, user_bot)
-
-                    # TODO: support file uploads here (file_share subtype)
-
+                    if subtype == 'file_share':
+                        return self._post_to_imgur(
+                            user_bot, self.raw_message['file'])
                 log.msg('Posting message to IRC')
                 self._post_to_irc(channel_name, user_bot)
             elif message_type == 'member_joined_channel':
@@ -83,6 +87,28 @@ class SlackMessage:
             '#' + channel_name,
             self.raw_message['text'],
         )
+    
+    # TODO: Change this to fluffy.cc in the future? 
+    def _post_to_imgur(self, user_bot, file_data):
+        ext = file_data['filetype']
+        if ext != 'png' and ext != 'jpg':
+            return
+
+        auth = {'Authorization': 'Bearer {}'.format(self.bridge_bot.slack_token)}
+        r = requests.get(file_data['url_private'],
+                         headers=auth, stream=True)
+        if r.status_code != 200:
+            return
+
+        with tempfile.NamedTemporaryFile('wb', suffix='.' + ext) as tempf:
+            r.raw.decode_content = True
+            shutil.copyfileobj(r.raw, tempf)
+            image = self.imgur.upload_image(tempf.name,
+                                            title=file_data['title'])
+            channel = self.channels[self.raw_message['channel']]
+            user_bot.post_to_irc('#' + channel['name'],
+                                 'Uploaded an image on Slack: '
+                                 + image.link)
 
     def _post_to_irc(self, channel_name, user_bot):
         user_bot.post_to_irc(

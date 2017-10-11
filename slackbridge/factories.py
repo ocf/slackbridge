@@ -24,12 +24,13 @@ class BotFactory(ReconnectingClientFactory):
 class BridgeBotFactory(BotFactory):
 
     def __init__(self, slack_client, bridge_nick, nickserv_pw, slack_uid,
-                 channels, users):
+                 channels, users, imgur):
         self.slack_client = slack_client
         self.slack_uid = slack_uid
         self.bridge_nickname = bridge_nick
         self.nickserv_password = nickserv_pw
         self.bot_class = BridgeBot
+        self.imgur = imgur
 
         # Give all bots access to the Slack channel and user list
         IRCBot.channels = {
@@ -50,6 +51,7 @@ class BridgeBotFactory(BotFactory):
             self.bridge_nickname,
             self.nickserv_password,
             self.slack_uid,
+            self.imgur,
         )
         p.factory = self
         self.resetDelay()

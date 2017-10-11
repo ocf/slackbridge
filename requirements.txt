@@ -10,6 +10,7 @@ hyperlink==17.3.1
 idna==2.6
 incremental==17.5.0
 pycparser==2.18
+pyimgur==0.6.0
 pyOpenSSL==17.3.0
 requests==2.18.4
 setuptools==36.5.0
