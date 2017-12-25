@@ -9,6 +9,15 @@ from twisted.words.protocols import irc
 
 import slackbridge.utils as utils
 
+# Subtypes of messages we don't want mirrored to IRC
+IGNORED_MSG_SUBTYPES = (
+    # Joins and leaves are already shown by IRC when the bot joins/leaves, so
+    # we don't need these. The leave messages actually are already not shown
+    # because the bot exits, then gets the message, so it never gets posted.
+    'channel_join',
+    'channel_leave',
+)
+
 
 class IRCBot(irc.IRCClient):
     pass
@@ -56,6 +65,12 @@ class BridgeBot(IRCBot):
             if channel_id in self.channels:
                 channel_name = self.channels[channel_id]['name']
                 if message_type == 'message':
+                    if 'subtype' in self.raw_message:
+                        if self.raw_message['subtype'] in IGNORED_MSG_SUBTYPES:
+                            return
+                        # TODO: support file uploads here (file_share subtype)
+
+                    log.msg('Posting message to IRC')
                     self._post_to_irc(channel_name, user_bot)
                 elif message_type == 'member_joined_channel':
                     self._join_channel(channel_name, user_bot)
@@ -227,6 +242,7 @@ class UserBot(IRCBot):
         self.leave('#{}'.format(channel_name))
 
     def post_to_irc(self, channel, message):
+        log.msg('User bot posting message to IRC')
         self.msg(channel, self._format_message(message))
 
     def _format_message(self, message):
