@@ -55,8 +55,12 @@ class SlackMessage:
             channel_name = self.bridge_bot.channels[channel_id]['name']
             if message_type == 'message':
                 if 'subtype' in self.raw_message:
-                    if self.raw_message['subtype'] in IGNORED_MSG_SUBTYPES:
+                    subtype = self.raw_message['subtype']
+                    if subtype in IGNORED_MSG_SUBTYPES:
                         return
+                    if subtype == 'me_message':
+                        return self._irc_me_action(channel_name, user_bot)
+
                     # TODO: support file uploads here (file_share subtype)
 
                 log.msg('Posting message to IRC')
@@ -73,9 +77,20 @@ class SlackMessage:
         elif self.raw_message['presence'] == 'active':
             user_bot.back()
 
+    def _irc_me_action(self, channel_name, user_bot):
+        user_bot.post_to_irc(
+            user_bot.describe,
+            '#' + channel_name,
+            self.raw_message['text'],
+        )
+
+
     def _post_to_irc(self, channel_name, user_bot):
         user_bot.post_to_irc(
-            '#' + channel_name, self.raw_message['text'])
+            user_bot.msg,
+            '#' + channel_name,
+            self.raw_message['text'],
+        )
 
     # For PriorityQueue to order by timestamp, override comparisons.
     # @total_ordering generates the other comparisons given the two below.
