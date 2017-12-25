@@ -7,7 +7,12 @@ test: venv install-hooks
 
 .PHONY: dev
 dev: venv
+# Check if a local slackbridge.conf exists, and use it if it does
+ifeq ($(wildcard slackbridge.conf),)
 		venv/bin/python -m slackbridge.main
+else
+		venv/bin/python -m slackbridge.main -c slackbridge.conf
+endif
 
 .PHONY: install-hooks
 install-hooks: venv
