@@ -20,7 +20,13 @@ IGNORED_MSG_SUBTYPES = (
 
 
 class IRCBot(irc.IRCClient):
-    pass
+    # Global-ish lookup tables for users/channels by id to make it so this
+    # information is not passed around everywhere and to not have to make a
+    # Slack API call each time this information is wanted, since it doesn't
+    # change often and can be updated by events.
+    channels = {}
+    channel_name_to_uid = {}
+    users = {}
 
 
 class BridgeBot(IRCBot):
@@ -29,8 +35,7 @@ class BridgeBot(IRCBot):
     class SlackMessage:
         def __init__(self, raw_message, bridge_bot):
             self.raw_message = raw_message
-            self.channels = bridge_bot.channels
-            self.users = bridge_bot.users
+            self.bridge_bot = bridge_bot
             if 'ts' in raw_message:
                 self.timestamp = float(raw_message['ts'])
             else:
@@ -49,10 +54,10 @@ class BridgeBot(IRCBot):
                 return
 
             user = self.raw_message['user']
-            if not isinstance(user, str) or user not in self.users:
+            if not isinstance(user, str) or user not in IRCBot.users:
                 return
 
-            user_bot = self.users[user]
+            user_bot = IRCBot.users[user]
 
             if message_type == 'presence_change':
                 self._change_presence(user_bot)
@@ -62,8 +67,8 @@ class BridgeBot(IRCBot):
                 return
 
             channel_id = self.raw_message['channel']
-            if channel_id in self.channels:
-                channel_name = self.channels[channel_id]['name']
+            if channel_id in IRCBot.channels.keys():
+                channel_name = IRCBot.channels[channel_id]['name']
                 if message_type == 'message':
                     if 'subtype' in self.raw_message:
                         if self.raw_message['subtype'] in IGNORED_MSG_SUBTYPES:
@@ -110,22 +115,14 @@ class BridgeBot(IRCBot):
                 return NotImplemented
             return self.timestamp == other.timestamp
 
-    def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid, channels,
-                 user_bots):
+    def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid):
         self.sc = sc
-        self.user_bots = user_bots
         self.nickserv_password = nickserv_pw
         self.slack_uid = slack_uid
-        self.users = {bot.user_id: bot for bot in user_bots}
-        self.channels = {channel['id']: channel for channel in channels}
-        self.channel_name_uid_map = {channel['name']: channel['id']
-                                     for channel in channels}
         self.nickname = bridge_nick
         self.message_queue = queue.PriorityQueue()
 
         self.rtm_connect()
-
-        log.msg('Connected successfully to Slack RTM')
 
         # Create a looping call to poll Slack for updates
         rtm_loop = LoopingCall(self.check_slack_rtm)
@@ -142,12 +139,13 @@ class BridgeBot(IRCBot):
         while not self.sc.rtm_connect():
             log.err('Could not connect to Slack RTM, check token/rate limits')
             time.sleep(5)
+        log.msg('Connected successfully to Slack RTM')
 
     def signedOn(self):
         self.msg('NickServ', 'identify {}'.format(self.nickserv_password))
         log.msg('Authenticated with NickServ')
 
-        for channel in self.channels.values():
+        for channel in IRCBot.channels.values():
             log.msg('Joining #{}'.format(channel['name']))
             self.join('#{}'.format(channel['name']))
 
@@ -198,8 +196,8 @@ class BridgeBot(IRCBot):
     # which gets called when the topic changes, or when
     # a channel is entered for the first time.
     def topicUpdated(self, user, channel, new_topic):
-        channel_uid = self.channel_name_uid_map[channel[1:]]
-        last_topic = self.channels[channel_uid]['topic']['value']
+        channel_uid = IRCBot.channel_name_to_uid[channel[1:]]
+        last_topic = IRCBot.channels[channel_uid]['topic']['value']
         if new_topic != last_topic:
             self.sc.api_call(
                 'channels.setTopic',
@@ -210,12 +208,12 @@ class BridgeBot(IRCBot):
 
 class UserBot(IRCBot):
 
-    def __init__(self, nickname, realname, user_id, channels,
+    def __init__(self, nickname, realname, user_id, joined_channels,
                  target_group, nickserv_pw):
         self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
         self.realname = realname
         self.user_id = user_id
-        self.channels = channels
+        self.joined_channels = joined_channels
         self.nickserv_password = nickserv_pw
         self.target_group_nick = target_group
 
@@ -229,17 +227,21 @@ class UserBot(IRCBot):
         # And if not, register for the first time
         self.msg('NickServ', 'GROUP {} {}'.format(self.target_group_nick,
                                                   self.nickserv_password))
-        for channel in self.channels:
-            self.log(log.msg, 'Joining #{}'.format(channel['name']))
-            self.join_channel(channel['name'])
+        for channel_name in self.joined_channels:
+            self.log(log.msg, 'Joining #{}'.format(channel_name))
+            self.join_channel(channel_name)
 
         self.away('Default away for startup.')
 
     def join_channel(self, channel_name):
         self.join('#{}'.format(channel_name))
+        if channel_name not in self.joined_channels:
+            self.joined_channels.append(channel_name)
 
     def part_channel(self, channel_name):
         self.leave('#{}'.format(channel_name))
+        if channel_name in self.joined_channels:
+            self.joined_channels.remove(channel_name)
 
     def post_to_irc(self, channel, message):
         log.msg('User bot posting message to IRC')

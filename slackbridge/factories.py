@@ -29,12 +29,15 @@ class BridgeBotFactory(BotFactory):
         self.slack_uid = slack_uid
         self.bridge_nickname = bridge_nick
         self.nickserv_password = nickserv_pw
-        self.channels = channels
         self.bot_class = BridgeBot
-        self.user_bots = []
 
-        # Give all bots access to the slack userlist
-        IRCBot.slack_users = users
+        # Give all bots access to the Slack channel and user list
+        IRCBot.channels = {
+            channel['id']: channel for channel in channels
+        }
+        IRCBot.channel_name_to_uid = {
+            channel['name']: channel['id'] for channel in channels
+        }
 
         # Create individual user bots with their own connections to the IRC
         # server and their own nicknames
@@ -47,20 +50,18 @@ class BridgeBotFactory(BotFactory):
             self.bridge_nickname,
             self.nickserv_password,
             self.slack_uid,
-            self.channels,
-            self.user_bots,
         )
         p.factory = self
         self.resetDelay()
         return p
 
     def add_user_bot(self, user_bot):
-        self.user_bots.append(user_bot)
+        IRCBot.users[user_bot.user_id] = user_bot
 
     def instantiate_bot(self, user):
         user_factory = UserBotFactory(
-            self, user,
-            self.channels,
+            self,
+            user,
             self.bridge_nickname,
             self.nickserv_password,
         )
@@ -71,24 +72,24 @@ class BridgeBotFactory(BotFactory):
 
 class UserBotFactory(BotFactory):
 
-    def __init__(self, bridge_bot_factory, slack_user, channels,
-                 target_group, nickserv_pw):
+    def __init__(self, bridge_bot_factory, slack_user, target_group,
+                 nickserv_pw):
         self.bridge_bot_factory = bridge_bot_factory
         self.slack_user = slack_user
-        self.channels = []
+        self.joined_channels = []
         self.target_group_nick = target_group
         self.nickserv_password = nickserv_pw
 
-        for channel in channels:
+        for channel_id, channel in IRCBot.channels.items():
             if slack_user['id'] in channel['members']:
-                self.channels.append(channel)
+                self.joined_channels.append(channel['name'])
 
     def buildProtocol(self, addr):
         p = UserBot(
             self.slack_user['name'],
             self.slack_user['real_name'],
             self.slack_user['id'],
-            self.channels,
+            self.joined_channels,
             self.target_group_nick,
             self.nickserv_password,
         )
