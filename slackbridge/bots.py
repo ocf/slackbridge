@@ -39,10 +39,11 @@ class BridgeBot(IRCBot):
                 self._create_irc_bot(self.raw_message['user'])
                 return
 
-            if self.raw_message['user'] not in self.users:
+            user = self.raw_message['user']
+            if not isinstance(user, str) or user not in self.users:
                 return
 
-            user_bot = self.users[self.raw_message['user']]
+            user_bot = self.users[user]
 
             if message_type == 'presence_change':
                 self._change_presence(user_bot)
@@ -51,13 +52,15 @@ class BridgeBot(IRCBot):
             if 'channel' not in self.raw_message:
                 return
 
-            if self.raw_message['channel'] in self.channels:
+            channel_id = self.raw_message['channel']
+            if channel_id in self.channels:
+                channel_name = self.channels[channel_id]['name']
                 if message_type == 'message':
-                    self._post_to_irc(user_bot)
+                    self._post_to_irc(channel_name, user_bot)
                 elif message_type == 'member_joined_channel':
-                    self._join_channel(user_bot)
+                    self._join_channel(channel_name, user_bot)
                 elif message_type == 'member_left_channel':
-                    self._part_channel(user_bot)
+                    self._part_channel(channel_name, user_bot)
                 return
 
         def _create_irc_bot(self, user):
@@ -70,18 +73,15 @@ class BridgeBot(IRCBot):
             elif self.raw_message['presence'] == 'active':
                 user_bot.back()
 
-        def _post_to_irc(self, user_bot):
-            channel = self.channels[self.raw_message['channel']]
+        def _post_to_irc(self, channel_name, user_bot):
             user_bot.post_to_irc(
-                '#' + channel['name'], self.raw_message['text'])
+                '#' + channel_name, self.raw_message['text'])
 
-        def _join_channel(self, user_bot):
-            channel = self.channels[self.raw_message['channel']]
-            user_bot.join_channel(channel['name'])
+        def _join_channel(self, channel_name, user_bot):
+            user_bot.join_channel(channel_name)
 
-        def _part_channel(self, user_bot):
-            channel = self.channels[self.raw_message['channel']]
-            user_bot.part_channel(channel['name'])
+        def _part_channel(self, channel_name, user_bot):
+            user_bot.part_channel(channel_name)
 
         # For PriorityQueue to order by timestamp, override comparisons.
         # @total_ordering generates the other comparisons given the two below.

@@ -40,14 +40,12 @@ def main():
     log.startLogging(sys.stdout)
 
     # Get all channels from Slack
-    # TODO: Remove duplication between here and the user selection part
-    # This should just be made into a generic Slack API call method
     log.msg('Requesting list of channels from Slack...')
     results = slack_api(sc, 'channels.list', exclude_archives=1)
     slack_channels = results['channels']
 
     # Get all users from Slack, but don't select bots, deactivated users, or
-    # slackbot to have IRC bots
+    # slackbot, since they don't need IRC bots (they aren't users)
     log.msg('Requesting list of users from Slack...')
     results = slack_api(sc, 'users.list')
     slack_users = [
