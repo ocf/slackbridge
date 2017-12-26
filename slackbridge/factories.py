@@ -80,7 +80,7 @@ class UserBotFactory(BotFactory):
         self.target_group_nick = target_group
         self.nickserv_password = nickserv_pw
 
-        for channel_id, channel in IRCBot.channels.items():
+        for channel in IRCBot.channels.values():
             if slack_user['id'] in channel['members']:
                 self.joined_channels.append(channel['name'])
 
