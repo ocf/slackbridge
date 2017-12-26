@@ -62,20 +62,17 @@ class BridgeBot(IRCBot):
         self.post_to_slack(user, channel, '_{}_'.format(message))
 
     def post_to_slack(self, user, channel, message):
-        # User is like 'jvperrin!Jason@fireball.ocf.berkeley.edu' so only
-        # take the part before the exclamation mark for the Slack display name
-        assert user.count('!') == 1
-        user, _ = user.split('!')
+        nick = utils.nick_from_irc_user(user)
 
         # Don't post to Slack if it came from a Slack bot
-        if '-slack' not in user and user != 'defaultnick':
+        if '-slack' not in nick and nick != 'defaultnick':
             log.msg(self.sc.api_call(
                 'chat.postMessage',
                 channel=channel,
                 text=utils.format_slack_message(message),
                 as_user=False,
-                username=user,
-                icon_url=utils.user_to_gravatar(user),
+                username=nick,
+                icon_url=utils.user_to_gravatar(nick),
             ))
 
     def check_slack_rtm(self):

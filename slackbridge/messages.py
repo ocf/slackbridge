@@ -84,7 +84,6 @@ class SlackMessage:
             self.raw_message['text'],
         )
 
-
     def _post_to_irc(self, channel_name, user_bot):
         user_bot.post_to_irc(
             user_bot.msg,
