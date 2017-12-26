@@ -1,4 +1,3 @@
-import functools
 import queue
 import re
 import time
@@ -8,124 +7,29 @@ from twisted.python import log
 from twisted.words.protocols import irc
 
 import slackbridge.utils as utils
-
-# Subtypes of messages we don't want mirrored to IRC
-IGNORED_MSG_SUBTYPES = (
-    # Joins and leaves are already shown by IRC when the bot joins/leaves, so
-    # we don't need these. The leave messages actually are already not shown
-    # because the bot exits, then gets the message, so it never gets posted.
-    'channel_join',
-    'channel_leave',
-)
+from slackbridge.messages import SlackMessage
 
 
 class IRCBot(irc.IRCClient):
-    pass
+    # Global-ish lookup tables for users/channels by id to make it so this
+    # information is not passed around everywhere and to not have to make a
+    # Slack API call each time this information is wanted, since it doesn't
+    # change often and can be updated by events.
+    channels = {}
+    channel_name_to_uid = {}
+    users = {}
 
 
 class BridgeBot(IRCBot):
 
-    @functools.total_ordering
-    class SlackMessage:
-        def __init__(self, raw_message, bridge_bot):
-            self.raw_message = raw_message
-            self.channels = bridge_bot.channels
-            self.users = bridge_bot.users
-            if 'ts' in raw_message:
-                self.timestamp = float(raw_message['ts'])
-            else:
-                self.timestamp = time.time()
-
-        def resolve(self):
-            if ('type' not in self.raw_message or
-                    'user' not in self.raw_message or
-                    'bot_id' in self.raw_message):
-                return
-
-            message_type = self.raw_message['type']
-
-            if self.raw_message['type'] == 'team_join':
-                self._create_irc_bot(self.raw_message['user'])
-                return
-
-            user = self.raw_message['user']
-            if not isinstance(user, str) or user not in self.users:
-                return
-
-            user_bot = self.users[user]
-
-            if message_type == 'presence_change':
-                self._change_presence(user_bot)
-                return
-
-            if 'channel' not in self.raw_message:
-                return
-
-            channel_id = self.raw_message['channel']
-            if channel_id in self.channels:
-                channel_name = self.channels[channel_id]['name']
-                if message_type == 'message':
-                    if 'subtype' in self.raw_message:
-                        if self.raw_message['subtype'] in IGNORED_MSG_SUBTYPES:
-                            return
-                        # TODO: support file uploads here (file_share subtype)
-
-                    log.msg('Posting message to IRC')
-                    self._post_to_irc(channel_name, user_bot)
-                elif message_type == 'member_joined_channel':
-                    self._join_channel(channel_name, user_bot)
-                elif message_type == 'member_left_channel':
-                    self._part_channel(channel_name, user_bot)
-                return
-
-        def _create_irc_bot(self, user):
-            IRCBot.slack_users.append(user)
-            self.bridge_bot.factory.instantiate_bot(user)
-
-        def _change_presence(self, user_bot):
-            if self.raw_message['presence'] == 'away':
-                user_bot.away('Slack user inactive.')
-            elif self.raw_message['presence'] == 'active':
-                user_bot.back()
-
-        def _post_to_irc(self, channel_name, user_bot):
-            user_bot.post_to_irc(
-                '#' + channel_name, self.raw_message['text'])
-
-        def _join_channel(self, channel_name, user_bot):
-            user_bot.join_channel(channel_name)
-
-        def _part_channel(self, channel_name, user_bot):
-            user_bot.part_channel(channel_name)
-
-        # For PriorityQueue to order by timestamp, override comparisons.
-        # @total_ordering generates the other comparisons given the two below.
-        def __lt__(self, other):
-            if not hasattr(other, 'timestamp'):
-                return NotImplemented
-            return self.timestamp < other.timestamp
-
-        def __eq__(self, other):
-            if not hasattr(other, 'timestamp'):
-                return NotImplemented
-            return self.timestamp == other.timestamp
-
-    def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid, channels,
-                 user_bots):
+    def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid):
         self.sc = sc
-        self.user_bots = user_bots
         self.nickserv_password = nickserv_pw
         self.slack_uid = slack_uid
-        self.users = {bot.user_id: bot for bot in user_bots}
-        self.channels = {channel['id']: channel for channel in channels}
-        self.channel_name_uid_map = {channel['name']: channel['id']
-                                     for channel in channels}
         self.nickname = bridge_nick
         self.message_queue = queue.PriorityQueue()
 
         self.rtm_connect()
-
-        log.msg('Connected successfully to Slack RTM')
 
         # Create a looping call to poll Slack for updates
         rtm_loop = LoopingCall(self.check_slack_rtm)
@@ -142,6 +46,7 @@ class BridgeBot(IRCBot):
         while not self.sc.rtm_connect():
             log.err('Could not connect to Slack RTM, check token/rate limits')
             time.sleep(5)
+        log.msg('Connected successfully to Slack RTM')
 
     def signedOn(self):
         self.msg('NickServ', 'identify {}'.format(self.nickserv_password))
@@ -186,7 +91,7 @@ class BridgeBot(IRCBot):
             log.msg(message)
 
             if 'type' in message:
-                message_obj = self.SlackMessage(message, self)
+                message_obj = SlackMessage(message, self)
                 self.message_queue.put(message_obj)
 
     def empty_queue(self):
@@ -198,7 +103,7 @@ class BridgeBot(IRCBot):
     # which gets called when the topic changes, or when
     # a channel is entered for the first time.
     def topicUpdated(self, user, channel, new_topic):
-        channel_uid = self.channel_name_uid_map[channel[1:]]
+        channel_uid = self.channel_name_to_uid[channel[1:]]
         last_topic = self.channels[channel_uid]['topic']['value']
         if new_topic != last_topic:
             self.sc.api_call(
@@ -210,12 +115,12 @@ class BridgeBot(IRCBot):
 
 class UserBot(IRCBot):
 
-    def __init__(self, nickname, realname, user_id, channels,
+    def __init__(self, nickname, realname, user_id, joined_channels,
                  target_group, nickserv_pw):
         self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
         self.realname = realname
         self.user_id = user_id
-        self.channels = channels
+        self.joined_channels = joined_channels
         self.nickserv_password = nickserv_pw
         self.target_group_nick = target_group
 
@@ -229,17 +134,21 @@ class UserBot(IRCBot):
         # And if not, register for the first time
         self.msg('NickServ', 'GROUP {} {}'.format(self.target_group_nick,
                                                   self.nickserv_password))
-        for channel in self.channels:
-            self.log(log.msg, 'Joining #{}'.format(channel['name']))
-            self.join_channel(channel['name'])
+        for channel_name in self.joined_channels:
+            self.log(log.msg, 'Joining #{}'.format(channel_name))
+            self.join(channel_name)
 
         self.away('Default away for startup.')
 
-    def join_channel(self, channel_name):
-        self.join('#{}'.format(channel_name))
+    def joined(self, channel_name):
+        """Called by twisted when a channel has been joined"""
+        if channel_name not in self.joined_channels:
+            self.joined_channels.append(channel_name)
 
-    def part_channel(self, channel_name):
-        self.leave('#{}'.format(channel_name))
+    def left(self, channel_name):
+        """Called by twisted when a channel has been left"""
+        if channel_name in self.joined_channels:
+            self.joined_channels.remove(channel_name)
 
     def post_to_irc(self, channel, message):
         log.msg('User bot posting message to IRC')
