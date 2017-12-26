@@ -1,7 +1,6 @@
 import queue
 import time
 
-import requests
 from twisted.internet.task import LoopingCall
 from twisted.python import log
 from twisted.words.protocols import irc
@@ -18,16 +17,18 @@ class IRCBot(irc.IRCClient):
     channels = {}
     channel_name_to_uid = {}
     users = {}
+    # Used to upload images to imgur
+    slack_token = None
+    imgur = None
 
 
 class BridgeBot(IRCBot):
 
-    def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid, imgur):
+    def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid):
         self.sc = sc
         self.nickserv_password = nickserv_pw
         self.slack_uid = slack_uid
         self.nickname = bridge_nick
-        self.imgur = imgur
         self.message_queue = queue.PriorityQueue()
 
         self.rtm_connect()
@@ -92,7 +93,7 @@ class BridgeBot(IRCBot):
             log.msg(message)
 
             if 'type' in message:
-                self.message_queue.put(SlackMessage(message, self, imgur))
+                self.message_queue.put(SlackMessage(message, self))
 
     def empty_queue(self):
         while not self.message_queue.empty():

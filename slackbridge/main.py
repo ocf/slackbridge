@@ -2,11 +2,13 @@ import argparse
 import sys
 from configparser import ConfigParser
 
+from pyimgur import Imgur
 from slackclient import SlackClient
 from twisted.internet import reactor
 from twisted.internet import ssl
 from twisted.python import log
 
+from slackbridge.bots import IRCBot
 from slackbridge.factories import BridgeBotFactory
 from slackbridge.utils import IRC_HOST
 from slackbridge.utils import IRC_PORT
@@ -34,7 +36,18 @@ def main():
     # Slack configuration
     slack_token = conf.get('slack', 'token')
     slack_uid = conf.get('slack', 'user')
+    imgur_id = conf.get('imgur', 'client_id')
+
+    # Initialize Slack Client
     sc = SlackClient(slack_token)
+
+    # Initialize Imgur Client
+    imgur = Imgur(imgur_id)
+
+    # Set IRCBot class variables to avoid
+    # senselessly passing around variables
+    IRCBot.imgur = imgur
+    IRCBot.slack_token = slack_token
 
     # Log everything to stdout, which will be passed to syslog by stdin2syslog
     log.startLogging(sys.stdout)
