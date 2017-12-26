@@ -1,5 +1,4 @@
 import queue
-import re
 import time
 
 from twisted.internet.task import LoopingCall
@@ -57,24 +56,24 @@ class BridgeBot(IRCBot):
             self.join('#{}'.format(channel['name']))
 
     def privmsg(self, user, channel, message):
-        # user is like 'jvperrin!Jason@fireball.ocf.berkeley.edu' so only
-        # take the part before the exclamation mark for the Slack display name
-        assert user.count('!') == 1
-        user_nick, _ = user.split('!')
+        self.post_to_slack(user, channel, message)
 
-        # Don't post to Slack if it came from a Slack bot
-        if '-slack' not in user_nick and user_nick != 'defaultnick':
-            self.post_to_slack(user_nick, channel, message)
+    def action(self, user, channel, message):
+        self.post_to_slack(user, channel, '_{}_'.format(message))
 
     def post_to_slack(self, user, channel, message):
-        self.sc.api_call(
-            'chat.postMessage',
-            channel=channel,
-            text=message,
-            as_user=False,
-            username=user,
-            icon_url=utils.user_to_gravatar(user),
-        )
+        nick = utils.nick_from_irc_user(user)
+
+        # Don't post to Slack if it came from a Slack bot
+        if '-slack' not in nick and nick != 'defaultnick':
+            log.msg(self.sc.api_call(
+                'chat.postMessage',
+                channel=channel,
+                text=utils.format_slack_message(message),
+                as_user=False,
+                username=nick,
+                icon_url=utils.user_to_gravatar(nick),
+            ))
 
     def check_slack_rtm(self):
         try:
@@ -150,22 +149,10 @@ class UserBot(IRCBot):
         if channel_name in self.joined_channels:
             self.joined_channels.remove(channel_name)
 
-    def post_to_irc(self, channel, message):
+    def post_to_irc(self, method, channel, message):
         log.msg('User bot posting message to IRC')
-        self.msg(channel, self._format_message(message))
-
-    def _format_message(self, message):
-        match_ids = re.findall(r'(<\@([A-Z0-9]{9,})\>)', message)
-        # Avoid duplicate searches for multiple users mentions
-        # in the same Slack message.
-        for replace, uid in set(match_ids):
-            user_info = next(
-                (user for user in self.slack_users if user['id'] == uid),
-                None,
-            )
-            if user_info:
-                target_nick = '{}-slack'.format(
-                    utils.strip_nick(user_info['name']),
-                )
-                message = message.replace(replace, target_nick)
-        return message
+        method(channel, utils.format_irc_message(
+            message,
+            IRCBot.users,
+            IRCBot.channels,
+        ))
