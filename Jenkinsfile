@@ -1,15 +1,3 @@
-if (env.BRANCH_NAME == 'master') {
-    properties([
-        pipelineTriggers([
-            upstream(
-                upstreamProjects: 'dockers/master',
-                threshold: hudson.model.Result.SUCCESS,
-            ),
-        ]),
-    ])
-}
-
-
 try {
     node('slave') {
         step([$class: 'WsCleanup'])
