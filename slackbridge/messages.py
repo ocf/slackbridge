@@ -1,7 +1,7 @@
 import functools
 import shutil
-import tempfile
 import time
+from tempfile import NamedTemporaryFile
 
 import requests
 from twisted.python import log
@@ -15,12 +15,7 @@ IGNORED_MSG_SUBTYPES = (
     'channel_leave',
 )
 
-# Extensions that we will allow to be mirrored to IRC
-ALLOWED_FILE_EXTS = (
-    'jpg',
-    'png',
-    'gif',
-)
+FILEHOST = 'https://fluffy.cc'
 
 
 @functools.total_ordering
@@ -28,7 +23,6 @@ class SlackMessage:
     def __init__(self, raw_message, bridge_bot):
         self.raw_message = raw_message
         self.bridge_bot = bridge_bot
-        self.imgur = self.bridge_bot.imgur
 
         if 'ts' in raw_message:
             self.timestamp = float(raw_message['ts'])
@@ -71,10 +65,16 @@ class SlackMessage:
                         return
                     if subtype == 'me_message':
                         return self._irc_me_action(
-                            channel_name, user_bot, self.raw_message['text'])
+                            channel_name,
+                            user_bot,
+                            self.raw_message['text'],
+                        )
                     if subtype == 'file_share':
-                        return self._post_to_imgur(
-                            channel_name, user_bot, self.raw_message['file'])
+                        return self._post_to_fluffy(
+                            channel_name,
+                            user_bot,
+                            self.raw_message['file'],
+                        )
                 log.msg('Posting message to IRC')
                 self._post_to_irc(channel_name, user_bot)
             elif message_type == 'member_joined_channel':
@@ -102,34 +102,46 @@ class SlackMessage:
             action,
         )
 
-    # TODO: Change image host to fluffy.cc in the future?
-    def _post_to_imgur(self, channel_name, user_bot, file_data):
+    def _post_to_fluffy(self, channel_name, user_bot, file_data):
         ext = file_data['filetype']
-        if ext not in ALLOWED_FILE_EXTS:
-            return
-
+        # Adapted from https://api.slack.com/tutorials/working-with-files
         auth = {'Authorization': 'Bearer {}'.format(
-            self.bridge_bot.slack_token)}
-        r = requests.get(file_data['url_private'],
-                         headers=auth, stream=True)
+            self.bridge_bot.slack_token
+        )}
+        r = requests.get(
+            file_data['url_private'],
+            headers=auth,
+            stream=True,
+        )
         if r.status_code != 200:
-            log.msg('Could not GET image from: {}'.format(
-                file_data['url_private']))
+            log.err('Could not GET image from: {}'.format(
+                file_data['url_private'],
+            ))
             return
 
-        with tempfile.NamedTemporaryFile('wb', suffix='.' + ext) as tempf:
+        with NamedTemporaryFile(suffix='.' + ext) as tf:
+            # Download and put file in /tmp
             r.raw.decode_content = True
-            shutil.copyfileobj(r.raw, tempf)
+            shutil.copyfileobj(r.raw, tf)
 
-            # The upload_image method calls raise_for_status
-            # which will trigger an HTTPError exception
-            try:
-                image = self.imgur.upload_image(tempf.name,
-                                                title=file_data['title'])
-                self._irc_me_action(channel_name, user_bot,
-                                    'uploaded an image: ' + image.link)
-            except requests.exceptions.HTTPError as e:
-                log.msg('Imgur upload failed: ' + str(e))
+            # Upload File to fluffy
+            tf.seek(0)
+            r = requests.post(
+                FILEHOST + '/upload',
+                files={'file': tf},
+                allow_redirects=False,
+            )
+            if r.status_code not in (301, 302):
+                log.err('Failed to upload (status code {}):'.format(
+                    r.status_code,
+                ))
+                return
+
+            self._irc_me_action(
+                channel_name,
+                user_bot,
+                'uploaded an image: ' + r.headers['Location'],
+            )
 
     def _post_to_irc(self, channel_name, user_bot):
         user_bot.post_to_irc(

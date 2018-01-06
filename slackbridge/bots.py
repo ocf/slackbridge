@@ -17,9 +17,8 @@ class IRCBot(irc.IRCClient):
     channels = {}
     channel_name_to_uid = {}
     users = {}
-    # Used to upload images to imgur
+    # Used to download slack files
     slack_token = None
-    imgur = None
 
 
 class BridgeBot(IRCBot):
