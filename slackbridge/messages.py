@@ -1,7 +1,6 @@
 import functools
-import shutil
+import os
 import time
-from tempfile import NamedTemporaryFile
 
 import requests
 from twisted.python import log
@@ -103,7 +102,6 @@ class SlackMessage:
         )
 
     def _post_to_fluffy(self, channel_name, user_bot, file_data):
-        ext = file_data['filetype']
         # Adapted from https://api.slack.com/tutorials/working-with-files
         auth = {'Authorization': 'Bearer {}'.format(
             self.bridge_bot.slack_token
@@ -119,29 +117,31 @@ class SlackMessage:
             ))
             return
 
-        with NamedTemporaryFile(suffix='.' + ext) as tf:
-            # Download and put file in /tmp
-            r.raw.decode_content = True
-            shutil.copyfileobj(r.raw, tf)
+        # Ensure file has an extension as this is necessary
+        # for fluffy to give a direct link in the browser.
+        filename = file_data['title']
+        if not os.path.splitext(filename)[1]:
+            filename += '.' + file_data['filetype']
 
-            # Upload File to fluffy
-            tf.seek(0)
-            r = requests.post(
-                FILEHOST + '/upload',
-                files={'file': tf},
-                allow_redirects=False,
-            )
-            if r.status_code not in (301, 302):
-                log.err('Failed to upload (status code {}):'.format(
-                    r.status_code,
-                ))
-                return
+        # Decompress file data and upload the file data as
+        # it is streamed.
+        r.raw.decode_content = True
+        r = requests.post(
+            FILEHOST + '/upload',
+            files={'file': (filename, r.raw)},
+            allow_redirects=False,
+        )
+        if r.status_code not in (301, 302):
+            log.err('Failed to upload (status code {}):'.format(
+                r.status_code,
+            ))
+            return
 
-            self._irc_me_action(
-                channel_name,
-                user_bot,
-                'uploaded an image: ' + r.headers['Location'],
-            )
+        self._irc_me_action(
+            channel_name,
+            user_bot,
+            'uploaded a file: ' + r.headers['Location'],
+        )
 
     def _post_to_irc(self, channel_name, user_bot):
         user_bot.post_to_irc(
