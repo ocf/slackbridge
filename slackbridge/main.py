@@ -7,6 +7,7 @@ from twisted.internet import reactor
 from twisted.internet import ssl
 from twisted.python import log
 
+from slackbridge.bots import IRCBot
 from slackbridge.factories import BridgeBotFactory
 from slackbridge.utils import IRC_HOST
 from slackbridge.utils import IRC_PORT
@@ -34,7 +35,13 @@ def main():
     # Slack configuration
     slack_token = conf.get('slack', 'token')
     slack_uid = conf.get('slack', 'user')
+
+    # Initialize Slack Client
     sc = SlackClient(slack_token)
+
+    # Set IRCBot class variables to avoid
+    # senselessly passing around variables
+    IRCBot.slack_token = slack_token
 
     # Log everything to stdout, which will be passed to syslog by stdin2syslog
     log.startLogging(sys.stdout)

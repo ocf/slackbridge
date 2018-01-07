@@ -17,6 +17,8 @@ class IRCBot(irc.IRCClient):
     channels = {}
     channel_name_to_uid = {}
     users = {}
+    # Used to download slack files
+    slack_token = None
 
 
 class BridgeBot(IRCBot):
@@ -90,8 +92,7 @@ class BridgeBot(IRCBot):
             log.msg(message)
 
             if 'type' in message:
-                message_obj = SlackMessage(message, self)
-                self.message_queue.put(message_obj)
+                self.message_queue.put(SlackMessage(message, self))
 
     def empty_queue(self):
         while not self.message_queue.empty():

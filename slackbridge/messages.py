@@ -1,6 +1,8 @@
 import functools
+import os
 import time
 
+import requests
 from twisted.python import log
 
 # Subtypes of messages we don't want mirrored to IRC
@@ -11,6 +13,8 @@ IGNORED_MSG_SUBTYPES = (
     'channel_join',
     'channel_leave',
 )
+
+FILEHOST = 'https://fluffy.cc'
 
 
 @functools.total_ordering
@@ -27,7 +31,7 @@ class SlackMessage:
     def resolve(self):
         if ('type' not in self.raw_message or
                 'user' not in self.raw_message or
-                'bot_id' in self.raw_message):
+                self.is_bot_user()):
             return
 
         message_type = self.raw_message['type']
@@ -59,10 +63,17 @@ class SlackMessage:
                     if subtype in IGNORED_MSG_SUBTYPES:
                         return
                     if subtype == 'me_message':
-                        return self._irc_me_action(channel_name, user_bot)
-
-                    # TODO: support file uploads here (file_share subtype)
-
+                        return self._irc_me_action(
+                            channel_name,
+                            user_bot,
+                            self.raw_message['text'],
+                        )
+                    if subtype == 'file_share':
+                        return self._post_to_fluffy(
+                            channel_name,
+                            user_bot,
+                            self.raw_message['file'],
+                        )
                 log.msg('Posting message to IRC')
                 self._post_to_irc(channel_name, user_bot)
             elif message_type == 'member_joined_channel':
@@ -71,17 +82,65 @@ class SlackMessage:
                 user_bot.leave(channel_name)
             return
 
+    def is_bot_user(self):
+        """Sometimes bot_id is not included and other
+        times it is passed as None. Checks both cases."""
+        return ('bot_id' in self.raw_message and
+                self.raw_message['bot_id'] is not None)
+
     def _change_presence(self, user_bot):
         if self.raw_message['presence'] == 'away':
             user_bot.away('Slack user inactive.')
         elif self.raw_message['presence'] == 'active':
             user_bot.back()
 
-    def _irc_me_action(self, channel_name, user_bot):
+    def _irc_me_action(self, channel_name, user_bot, action):
         user_bot.post_to_irc(
             user_bot.describe,
             '#' + channel_name,
-            self.raw_message['text'],
+            action,
+        )
+
+    def _post_to_fluffy(self, channel_name, user_bot, file_data):
+        # Adapted from https://api.slack.com/tutorials/working-with-files
+        auth = {'Authorization': 'Bearer {}'.format(
+            self.bridge_bot.slack_token
+        )}
+        r = requests.get(
+            file_data['url_private'],
+            headers=auth,
+            stream=True,
+        )
+        if r.status_code != 200:
+            log.err('Could not GET image from: {}'.format(
+                file_data['url_private'],
+            ))
+            return
+
+        # Ensure file has an extension as this is necessary
+        # for fluffy to give a direct link in the browser.
+        filename = file_data['title']
+        if not os.path.splitext(filename)[1]:
+            filename += '.' + file_data['filetype']
+
+        # Decompress file data and upload the file data as
+        # it is streamed.
+        r.raw.decode_content = True
+        r = requests.post(
+            FILEHOST + '/upload',
+            files={'file': (filename, r.raw)},
+            allow_redirects=False,
+        )
+        if r.status_code not in (301, 302):
+            log.err('Failed to upload (status code {}):'.format(
+                r.status_code,
+            ))
+            return
+
+        self._irc_me_action(
+            channel_name,
+            user_bot,
+            'uploaded a file: ' + r.headers['Location'],
         )
 
     def _post_to_irc(self, channel_name, user_bot):
