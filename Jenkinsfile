@@ -1,3 +1,9 @@
+// TODO: Remove this after properties are actually undefined
+// https://issues.jenkins-ci.org/browse/JENKINS-41875
+if (env.BRANCH_NAME == 'master') {
+    properties([])
+}
+
 try {
     node('slave') {
         step([$class: 'WsCleanup'])
