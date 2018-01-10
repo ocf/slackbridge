@@ -127,20 +127,26 @@ class SlackMessage:
         # it is streamed.
         r.raw.decode_content = True
         r = requests.post(
-            FILEHOST + '/upload',
+            FILEHOST + '/upload?json',
             files={'file': (filename, r.raw)},
-            allow_redirects=False,
         )
-        if r.status_code not in (301, 302):
+        if r.status_code != 200:
             log.err('Failed to upload (status code {}):'.format(
                 r.status_code,
             ))
             return
 
+        resp = r.json()
+        if not resp['success']:
+            log.err(resp['error'])
+            return
+
+        upload = resp['uploaded_files'][filename]
+        location = upload['paste'] or upload['raw']
         self._irc_me_action(
             channel_name,
             user_bot,
-            'uploaded a file: ' + r.headers['Location'],
+            'uploaded a file: ' + location,
         )
 
     def _post_to_irc(self, channel_name, user_bot):
