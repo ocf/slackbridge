@@ -69,11 +69,16 @@ class SlackMessage:
                             self.raw_message['text'],
                         )
                     if subtype == 'file_share':
-                        return self._post_to_fluffy(
+                        file = self.raw_message['file']
+                        self._post_to_fluffy(
                             channel_name,
                             user_bot,
-                            self.raw_message['file'],
+                            file,
                         )
+                        if 'initial_comment' not in file:
+                            return
+                        self.raw_message['text'] = \
+                            file['initial_comment']['comment']
                 log.msg('Posting message to IRC')
                 self._post_to_irc(channel_name, user_bot)
             elif message_type == 'member_joined_channel':
