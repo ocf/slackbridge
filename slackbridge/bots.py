@@ -44,7 +44,7 @@ class BridgeBot(IRCBot):
 
     def rtm_connect(self):
         # Attempt to connect to Slack RTM
-        while not self.sc.rtm_connect():
+        while not self.sc.rtm_connect(auto_reconnect=True):
             log.err('Could not connect to Slack RTM, check token/rate limits')
             time.sleep(5)
         log.msg('Connected successfully to Slack RTM')
@@ -82,7 +82,7 @@ class BridgeBot(IRCBot):
             message_list = self.sc.rtm_read()
         except TimeoutError:
             log.err('Retrieving message from Slack RTM timed out')
-            self.rtm_connect()
+            self.rtm_connect(auto_reconnect=True)
             return
 
         if not message_list:
