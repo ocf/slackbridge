@@ -82,7 +82,7 @@ class BridgeBot(IRCBot):
             message_list = self.sc.rtm_read()
         except TimeoutError:
             log.err('Retrieving message from Slack RTM timed out')
-            self.rtm_connect(auto_reconnect=True)
+            self.rtm_connect()
             return
 
         if not message_list:
