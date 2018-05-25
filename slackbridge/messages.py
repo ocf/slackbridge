@@ -35,13 +35,13 @@ class SlackMessage:
             return
 
         message_type = self.raw_message['type']
+        user = self.raw_message['user']
 
-        if self.raw_message['type'] == 'team_join':
+        if message_type == 'team_join':
             """Instantiate a new bot user with the user's information"""
-            self.bridge_bot.factory.instantiate_bot(self.raw_message['user'])
+            self.bridge_bot.factory.instantiate_bot(user)
             return
 
-        user = self.raw_message['user']
         if not isinstance(user, str) or user not in self.bridge_bot.users:
             return
 
@@ -51,10 +51,10 @@ class SlackMessage:
             self._change_presence(user_bot)
             return
 
-        if 'channel' not in self.raw_message:
+        channel_id = self.raw_message.get('channel')
+        if not channel_id or not isinstance(channel_id, str):
             return
 
-        channel_id = self.raw_message['channel']
         if channel_id in self.bridge_bot.channels:
             channel_name = self.bridge_bot.channels[channel_id]['name']
             if message_type == 'message':
