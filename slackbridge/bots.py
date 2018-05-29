@@ -1,6 +1,7 @@
 import queue
 import time
 
+from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
 from twisted.python import log
 from twisted.words.protocols import irc
@@ -118,6 +119,7 @@ class UserBot(IRCBot):
     def __init__(self, nickname, realname, user_id, joined_channels,
                  target_group, nickserv_pw):
         self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
+        self.intended_nickname = self.nickname
         self.realname = realname
         self.user_id = user_id
         self.joined_channels = joined_channels
@@ -129,16 +131,41 @@ class UserBot(IRCBot):
         return method(full_message)
 
     def signedOn(self):
-        # If already registered, auth in
-        self.msg('NickServ', 'IDENTIFY {}'.format(self.nickserv_password))
-        # And if not, register for the first time
-        self.msg('NickServ', 'GROUP {} {}'.format(self.target_group_nick,
-                                                  self.nickserv_password))
+        self.nickserv_auth()
+
         for channel_name in self.joined_channels:
             self.log(log.msg, 'Joining #{}'.format(channel_name))
             self.join(channel_name)
 
         self.away('Default away for startup.')
+
+    def nickserv_auth(self):
+        # If already registered, authenticate yourself to Nickserv
+        self.msg('NickServ', 'IDENTIFY {}'.format(self.nickserv_password))
+        # And if not, register for the first time,
+        # if the nickname is the intended one.
+        if self.nickname == self.intended_nickname:
+            self.msg('NickServ', 'GROUP {} {}'.format(
+                self.target_group_nick, self.nickserv_password))
+
+    # Called whenever the client wants to set a nickname, such as on startup
+    # or if there's a collision.
+    def setNick(self, nickname):
+        super().setNick(nickname)
+        self.nickserv_auth()
+
+    def nickChanged(self, nick):
+        super().nickChanged(nick)
+        if nick != self.intended_nickname:
+            reactor.callLater(10, self.setNick, self.intended_nickname)
+
+    # Called when an attempted nickname change collides with an existing one.
+    def irc_ERR_NICKNAMEINUSE(self, prefix, params):
+        # Appends an underscore to the intended nickname,
+        # and changes the bot's nickname to that
+        super().irc_ERR_NICKNAMEINUSE(prefix, params)
+
+        reactor.callLater(10, self.setNick, self.intended_nickname)
 
     def joined(self, channel_name):
         """Called by twisted when a channel has been joined"""
