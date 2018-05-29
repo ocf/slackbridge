@@ -157,6 +157,9 @@ class UserBot(IRCBot):
     def nickChanged(self, nick):
         super().nickChanged(nick)
         if nick != self.intended_nickname:
+            self.log(log.msg,
+                     'Attempting to change nick to {} in 10 seconds.'.format(
+                         self.intended_nickname))
             reactor.callLater(10, self.setNick, self.intended_nickname)
 
     # Called when an attempted nickname change collides with an existing one.
@@ -165,6 +168,9 @@ class UserBot(IRCBot):
         # and changes the bot's nickname to that
         super().irc_ERR_NICKNAMEINUSE(prefix, params)
 
+        self.log(log.msg,
+                 'Attempting to change nick to {} in 10 seconds.'.format(
+                     self.intended_nickname))
         reactor.callLater(10, self.setNick, self.intended_nickname)
 
     def joined(self, channel_name):
