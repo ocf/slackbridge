@@ -57,6 +57,7 @@ class BridgeBotFactory(BotFactory):
 
     def add_user_bot(self, user_bot):
         IRCBot.users[user_bot.user_id] = user_bot
+        IRCBot.slack_nicks.append(user_bot.nickname.split('-')[0])
 
     def instantiate_bot(self, user):
         user_factory = UserBotFactory(
