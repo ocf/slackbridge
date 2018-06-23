@@ -117,6 +117,7 @@ class UserBot(IRCBot):
 
     def __init__(self, nickname, realname, user_id, joined_channels,
                  target_group, nickserv_pw):
+        self.slack_name = nickname
         self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
         self.realname = realname
         self.user_id = user_id
