@@ -147,7 +147,7 @@ class UserBot(IRCBot):
             # And if not, register for the first time,
             self.msg('NickServ', 'GROUP {} {}'.format(
                 self.target_group_nick,
-                self.nickserv_password
+                self.nickserv_password,
             ))
 
     def setNick(self, nickname):
@@ -165,8 +165,8 @@ class UserBot(IRCBot):
             self.log(
                 log.msg,
                 'Attempting to change nick to {} in 10 seconds.'.format(
-                    self.intended_nickname
-                )
+                    self.intended_nickname,
+                ),
             )
             reactor.callLater(10, self.setNick, self.intended_nickname)
 
