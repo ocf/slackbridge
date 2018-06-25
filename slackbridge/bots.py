@@ -17,7 +17,6 @@ class IRCBot(irc.IRCClient):
     channels = {}
     channel_name_to_uid = {}
     users = {}
-    slack_nicks = []
     # Used to download slack files
     slack_token = None
 
@@ -71,7 +70,7 @@ class BridgeBot(IRCBot):
             log.msg(self.sc.api_call(
                 'chat.postMessage',
                 channel=channel,
-                text=utils.format_slack_message(message, IRCBot.slack_nicks),
+                text=utils.format_slack_message(message, IRCBot.users),
                 as_user=False,
                 username=nick,
                 icon_url=utils.user_to_gravatar(nick),
