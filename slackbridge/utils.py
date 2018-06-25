@@ -172,7 +172,7 @@ def format_irc_message(text, users, channels):
     return text
 
 
-def format_slack_message(text):
+def format_slack_message(text, users):
     """
     Strip any color codes coming from IRC, since Slack cannot display them
     The current solution is taken from https://stackoverflow.com/a/970723
@@ -182,7 +182,24 @@ def format_slack_message(text):
 
     TODO: Preserve bold and italics (convert to markdown?)
     """
-    return re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', text, flags=re.UNICODE)
+
+    def nick_replace(match):
+        """
+        Replace any IRC nick of the form keur-slack to <@keur> if it's in
+        the provided list of Slack display names. To prevent accidental
+        conversions, "no-more-slack" will not be converted to "<@no-more>",
+        assuming no user has the display name "no-more" in the Workspace.
+        """
+        nick = match.group(1)
+        for user in users.values():
+            if nick == user.slack_name:
+                return '<@{}>'.format(nick)
+        return match.group(0)
+
+    text = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', text, flags=re.UNICODE)
+    # we can be greedy here; nick is checked against valid list of users
+    text = re.sub(r'([^\s]+)-slack', nick_replace, text)
+    return text
 
 
 def slack_api(slack_client, *args, **kwargs):

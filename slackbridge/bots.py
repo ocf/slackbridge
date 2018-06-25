@@ -66,13 +66,12 @@ class BridgeBot(IRCBot):
 
     def post_to_slack(self, user, channel, message):
         nick = utils.nick_from_irc_user(user)
-
         # Don't post to Slack if it came from a Slack bot
         if '-slack' not in nick and nick != 'defaultnick':
             log.msg(self.sc.api_call(
                 'chat.postMessage',
                 channel=channel,
-                text=utils.format_slack_message(message),
+                text=utils.format_slack_message(message, IRCBot.users),
                 as_user=False,
                 username=nick,
                 icon_url=utils.user_to_gravatar(nick),
@@ -118,6 +117,7 @@ class UserBot(IRCBot):
 
     def __init__(self, nickname, realname, user_id, joined_channels,
                  target_group, nickserv_pw):
+        self.slack_name = nickname
         self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
         self.intended_nickname = self.nickname
         self.realname = realname
