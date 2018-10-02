@@ -68,7 +68,7 @@ class SlackMessage:
                             user_bot,
                             self.raw_message['text'],
                         )
-                for file in self.raw_message.get('files') or []:
+                for file in self.raw_message.get('files', []):
                     self._post_to_fluffy(
                         channel_name,
                         user_bot,
