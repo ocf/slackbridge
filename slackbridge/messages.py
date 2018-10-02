@@ -130,7 +130,8 @@ class SlackMessage:
             FILEHOST + '/upload?json',
             files={'file': (filename, r.raw)},
         )
-        if r.status_code == 413 and file_data['url_private'] != file_data['thumb_1024']:
+        if (r.status_code == 413 and
+                file_data['url_private'] != file_data['thumb_1024']):
             # file is too large, so force the use of the 1024 thumb
             file_data['url_private'] = file_data['thumb_1024']
             return self._post_to_fluffy(
