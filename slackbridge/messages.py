@@ -68,17 +68,12 @@ class SlackMessage:
                             user_bot,
                             self.raw_message['text'],
                         )
-                    if subtype == 'file_share':
-                        file = self.raw_message['file']
-                        self._post_to_fluffy(
-                            channel_name,
-                            user_bot,
-                            file,
-                        )
-                        if 'initial_comment' not in file:
-                            return
-                        self.raw_message['text'] = \
-                            file['initial_comment']['comment']
+                for file in self.raw_message.get('files', []):
+                    self._post_to_fluffy(
+                        channel_name,
+                        user_bot,
+                        file,
+                    )
                 log.msg('Posting message to IRC')
                 self._post_to_irc(channel_name, user_bot)
             elif message_type == 'member_joined_channel':
@@ -124,7 +119,7 @@ class SlackMessage:
 
         # Ensure file has an extension as this is necessary
         # for fluffy to give a direct link in the browser.
-        filename = file_data['title']
+        filename = file_data['name']
         if not os.path.splitext(filename)[1]:
             filename += '.' + file_data['filetype']
 
@@ -135,7 +130,16 @@ class SlackMessage:
             FILEHOST + '/upload?json',
             files={'file': (filename, r.raw)},
         )
-        if r.status_code != 200:
+        if (r.status_code == 413 and
+                file_data['url_private'] != file_data['thumb_1024']):
+            # file is too large, so force the use of the 1024 thumb
+            file_data['url_private'] = file_data['thumb_1024']
+            return self._post_to_fluffy(
+                channel_name,
+                user_bot,
+                file_data,
+            )
+        elif r.status_code != 200:
             log.err('Failed to upload (status code {}):'.format(
                 r.status_code,
             ))
