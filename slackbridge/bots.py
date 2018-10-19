@@ -115,8 +115,8 @@ class BridgeBot(IRCBot):
 
 class UserBot(IRCBot):
 
-    def __init__(self, nickname, realname, user_id, joined_channels,
-                 target_group, nickserv_pw):
+    def __init__(self, sc, nickname, realname, user_id, joined_channels, target_group, nickserv_pw):
+        self.sc = sc
         self.slack_name = nickname
         self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
         self.intended_nickname = self.nickname
@@ -149,6 +149,22 @@ class UserBot(IRCBot):
                 self.target_group_nick,
                 self.nickserv_password,
             ))
+    def privmsg(self, user, channel, message):
+        """
+        Set to handle of channel is own name (private chat)
+        """
+        nick = utils.nick_from_irc_user(user)
+        if channel == self.nickname:
+            channel = self.user_id
+            log.msg(self.sc.api_call(
+                'chat.postMessage',
+                channel=channel,
+                text=utils.format_slack_message(message, IRCBot.users),
+                as_user=False,
+                username=nick,
+                icon_url=utils.user_to_gravatar(nick),
+            ))
+                
 
     def setNick(self, nickname):
         """
