@@ -115,7 +115,8 @@ class BridgeBot(IRCBot):
 
 class UserBot(IRCBot):
 
-    def __init__(self, sc, nickname, realname, user_id, joined_channels, target_group, nickserv_pw):
+    def __init__(self, sc, nickname, realname, user_id, joined_channels, 
+                 target_group, nickserv_pw):
         self.sc = sc
         self.slack_name = nickname
         self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
@@ -125,6 +126,7 @@ class UserBot(IRCBot):
         self.joined_channels = joined_channels
         self.nickserv_password = nickserv_pw
         self.target_group_nick = target_group
+        self.im_id = None
 
     def log(self, method, message):
         full_message = '[{}]: {}'.format(self.nickname, message)
@@ -151,15 +153,23 @@ class UserBot(IRCBot):
             ))
     def privmsg(self, user, channel, message):
         """
-        Set to handle of channel is own name (private chat)
+        Set to handle if channel is own name (private chat)
         """
+
         nick = utils.nick_from_irc_user(user)
+        
         if channel == self.nickname:
-            channel = self.user_id
+            if not self.im_id:
+                self.im_id = self.sc.api_call(
+                        'im.open',
+                        user=self.user_id,
+                        return_im=True
+                        )['channel']['id']
+
             log.msg(self.sc.api_call(
                 'chat.postMessage',
-                channel=channel,
-                text=utils.format_slack_message(message, IRCBot.users),
+                channel=self.im_id,
+                text=utils.format_slack_message(nick + ": " + message, IRCBot.users),
                 as_user=False,
                 username=nick,
                 icon_url=utils.user_to_gravatar(nick),
