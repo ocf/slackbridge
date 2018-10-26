@@ -73,7 +73,7 @@ class BridgeBotFactory(BotFactory):
 
 class UserBotFactory(BotFactory):
 
-    def __init__(self, slack_client, bridge_bot_factory, slack_user, 
+    def __init__(self, slack_client, bridge_bot_factory, slack_user,
                  target_group, nickserv_pw):
         self.slack_client = slack_client
         self.bridge_bot_factory = bridge_bot_factory

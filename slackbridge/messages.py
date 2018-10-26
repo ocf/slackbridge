@@ -1,5 +1,6 @@
 import functools
 import os
+import re
 import time
 
 import requests
@@ -55,7 +56,32 @@ class SlackMessage:
         if not channel_id or not isinstance(channel_id, str):
             return
 
-        if channel_id in self.bridge_bot.channels:
+        if channel_id[0] == 'D':  # DM channels start with a D
+            if not user_bot.im_id:
+                user_bot.im_id = channel_id
+
+            # get irc target name from message
+            if 'text' in self.raw_message:
+                match = re.search('(.*\w):', self.raw_message['text'])
+                if match:
+                    channel_name = match.group(1)
+                    self.raw_message['text'] = self.raw_message['text']\
+                        .replace(match.group(0), '')\
+                        .strip()
+                    if channel_name:
+                        self._post_pm_to_irc(channel_name, user_bot)
+                else:
+                    log.msg(self.bridge_bot.sc.api_call(
+                        'chat.postMessage',
+                        channel=channel_id,
+                        text='Please message an '
+                        'IRC user with [username]: '
+                        '[message]',
+                        as_user=False,
+                        username=self.bridge_bot.nickname
+                    ))
+                    return
+        elif channel_id in self.bridge_bot.channels:
             channel_name = self.bridge_bot.channels[channel_id]['name']
             if message_type == 'message':
                 if 'subtype' in self.raw_message:
@@ -162,6 +188,13 @@ class SlackMessage:
         user_bot.post_to_irc(
             user_bot.msg,
             '#' + channel_name,
+            self.raw_message['text'],
+        )
+
+    def _post_pm_to_irc(self, channel_name, user_bot):
+        user_bot.post_to_irc(
+            user_bot.msg,
+            channel_name,
             self.raw_message['text'],
         )
 

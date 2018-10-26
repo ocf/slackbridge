@@ -98,7 +98,7 @@ class BridgeBot(IRCBot):
         while not self.message_queue.empty():
             message = self.message_queue.get()
             message.resolve()
-
+    """ #temp: block out setting topic to avoid spamming
     # Implements the IRCClient event handler of the same name,
     # which gets called when the topic changes, or when
     # a channel is entered for the first time.
@@ -111,11 +111,12 @@ class BridgeBot(IRCBot):
                 channel=channel_uid,
                 topic=new_topic
             )
+    """
 
 
 class UserBot(IRCBot):
 
-    def __init__(self, sc, nickname, realname, user_id, joined_channels, 
+    def __init__(self, sc, nickname, realname, user_id, joined_channels,
                  target_group, nickserv_pw):
         self.sc = sc
         self.slack_name = nickname
@@ -151,30 +152,30 @@ class UserBot(IRCBot):
                 self.target_group_nick,
                 self.nickserv_password,
             ))
+
     def privmsg(self, user, channel, message):
         """
         Set to handle if channel is own name (private chat)
         """
-
         nick = utils.nick_from_irc_user(user)
-        
+
         if channel == self.nickname:
             if not self.im_id:
                 self.im_id = self.sc.api_call(
-                        'im.open',
-                        user=self.user_id,
-                        return_im=True
-                        )['channel']['id']
+                    'im.open',
+                    user=self.user_id,
+                    return_im=True
+                )['channel']['id']
 
             log.msg(self.sc.api_call(
                 'chat.postMessage',
                 channel=self.im_id,
-                text=utils.format_slack_message(nick + ": " + message, IRCBot.users),
+                text=utils.format_slack_message(
+                    nick + ': ' + message, IRCBot.users),
                 as_user=False,
                 username=nick,
                 icon_url=utils.user_to_gravatar(nick),
             ))
-                
 
     def setNick(self, nickname):
         """
