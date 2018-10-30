@@ -124,7 +124,11 @@ def format_irc_message(text, users, channels):
         """
         user_id = match.group(1)
         readable = match.group(2)
-        return readable or users[user_id].nickname
+
+        if readable or user_id in users:
+            return readable or users[user_id].nickname
+        else:
+            return '(bot)'
 
     def var_replace(match):
         """
