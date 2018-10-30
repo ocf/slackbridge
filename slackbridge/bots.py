@@ -21,15 +21,32 @@ class IRCBot(irc.IRCClient):
     # Used to download slack files
     slack_token = None
 
+    def __init__(self, sc, nickname, nickserv_pw):
+        self.sc = sc
+        self.nickname = nickname
+        self.nickserv_password = nickserv_pw
+
+    def post_to_slack(self, user, channel, message):
+        nick = utils.nick_from_irc_user(user)
+        # Don't post to Slack if it came from a Slack bot
+        if '-slack' not in nick and nick != 'defaultnick':
+            log.msg(self.sc.api_call(
+                'chat.postMessage',
+                channel=channel,
+                text=utils.format_slack_message(message, IRCBot.users),
+                as_user=False,
+                username=nick,
+                icon_url=utils.user_to_gravatar(nick),
+            ))
+
 
 class BridgeBot(IRCBot):
 
     def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid):
-        self.sc = sc
-        self.nickserv_password = nickserv_pw
         self.slack_uid = slack_uid
-        self.nickname = bridge_nick
         self.message_queue = queue.PriorityQueue()
+
+        super().__init__(sc, bridge_nick, nickserv_pw)
 
         self.rtm_connect()
 
@@ -63,19 +80,6 @@ class BridgeBot(IRCBot):
 
     def action(self, user, channel, message):
         self.post_to_slack(user, channel, '_{}_'.format(message))
-
-    def post_to_slack(self, user, channel, message):
-        nick = utils.nick_from_irc_user(user)
-        # Don't post to Slack if it came from a Slack bot
-        if '-slack' not in nick and nick != 'defaultnick':
-            log.msg(self.sc.api_call(
-                'chat.postMessage',
-                channel=channel,
-                text=utils.format_slack_message(message, IRCBot.users),
-                as_user=False,
-                username=nick,
-                icon_url=utils.user_to_gravatar(nick),
-            ))
 
     def check_slack_rtm(self):
         try:
@@ -118,16 +122,18 @@ class UserBot(IRCBot):
 
     def __init__(self, sc, nickname, realname, user_id, joined_channels,
                  target_group, nickserv_pw):
+        intended_nickname = '{}-slack'.format(utils.strip_nick(nickname))
+
         self.sc = sc
         self.slack_name = nickname
-        self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
-        self.intended_nickname = self.nickname
+        self.intended_nickname = intended_nickname
         self.realname = realname
         self.user_id = user_id
         self.joined_channels = joined_channels
-        self.nickserv_password = nickserv_pw
         self.target_group_nick = target_group
         self.im_id = None
+
+        super().__init__(sc, intended_nickname, nickserv_pw)
 
     def log(self, method, message):
         full_message = '[{}]: {}'.format(self.nickname, message)
@@ -155,10 +161,9 @@ class UserBot(IRCBot):
 
     def privmsg(self, user, channel, message):
         """
-        Set to handle if channel is own name (private chat)
+        Handler if a private message is received
+        by an IRC user bot and addressed to self
         """
-        nick = utils.nick_from_irc_user(user)
-
         if channel == self.nickname:
             if not self.im_id:
                 self.im_id = self.sc.api_call(
@@ -166,16 +171,8 @@ class UserBot(IRCBot):
                     user=self.user_id,
                     return_im=True
                 )['channel']['id']
-
-            log.msg(self.sc.api_call(
-                'chat.postMessage',
-                channel=self.im_id,
-                text=utils.format_slack_message(
-                    nick + ': ' + message, IRCBot.users),
-                as_user=False,
-                username=nick,
-                icon_url=utils.user_to_gravatar(nick),
-            ))
+            nick = utils.nick_from_irc_user(user)
+            self.post_to_slack(user, self.im_id, nick + ': ' + message)
 
     def setNick(self, nickname):
         """
