@@ -12,7 +12,7 @@ incremental==17.5.0
 pycparser==2.18
 PyHamcrest==1.9.0
 pyOpenSSL==18.0.0
-requests==2.19.1
+requests==2.20.0
 setuptools==40.0.0
 six==1.11.0
 slackclient==1.2.1
