@@ -7,6 +7,7 @@ from twisted.python import log
 from twisted.words.protocols import irc
 
 import slackbridge.utils as utils
+from slackbridge.messages import IRCUser
 from slackbridge.messages import SlackMessage
 
 
@@ -20,14 +21,21 @@ class IRCBot(irc.IRCClient):
     users = {}
     # Used to download slack files
     slack_token = None
+    sc = None
+    # Used to store lookup and deferred private messages
+    irc_users = {}
 
     def __init__(self, sc, nickname, nickserv_pw):
         self.sc = sc
         self.nickname = nickname
         self.nickserv_password = nickserv_pw
 
-    def post_to_slack(self, user, channel, message):
-        nick = utils.nick_from_irc_user(user)
+    def post_to_slack(self, user, channel, message, resolve_nick=True):
+        if resolve_nick:
+            nick = utils.nick_from_irc_user(user)
+        else:
+            nick = user
+
         # Don't post to Slack if it came from a Slack bot
         if '-slack' not in nick and nick != 'defaultnick':
             log.msg(self.sc.api_call(
@@ -117,6 +125,69 @@ class BridgeBot(IRCBot):
             )
     """
 
+    def irc_330(self, prefix, params):
+        """
+        A 330-prefix response after a WHOIS [user] is sent
+        if [user] is registered AND authenticated.
+
+        Format of params:
+        [Querier, user, authenticated_name, 'is logged in as']
+        ['slack-bridge', 'jaw', 'jaw', 'is logged in as']
+        """
+        current_nickname = params[1]
+        authenticated_name = params[2]
+
+        self.verify_auth(current_nickname, authenticated_name)
+
+    def irc_RPL_ENDOFWHOIS(self, prefix, params):
+        """
+        RPL_ENDOFWHOIS signifies end of a WHOIS list for [user].
+
+        Format of params:
+        [Querier, user]
+        ['slack-bridge', 'jaw', 'End of /WHOIS list.']
+        """
+        user = params[1]
+
+        self.end_whois(user)
+
+    def userRenamed(self, user, newname):
+        self.deauthenticate(user)
+        self.deauthenticate(newname)
+
+    def userLeft(self, user, channel):
+        self.deauthenticate(user)
+
+    def userQuit(self, user, quitMessage):
+        self.deauthenticate(user)
+
+    def userKicked(self, user, channel, kicker, message):
+        self.deauthenticate(user)
+
+    def deauthenticate(self, user):
+        if user in self.irc_users:
+            self.irc_users.pop(user)
+
+    def authenticate(self, user):
+        if user not in self.irc_users:
+            self.irc_users[user] = IRCUser()
+        else:
+            self.irc_users[user].authenticated = False
+        self.whois(user)
+
+    def verify_auth(self, current_nickname, authenticated_name):
+        user = self.irc_users[current_nickname]
+        if current_nickname == authenticated_name:
+            user.authenticated = True
+        else:
+            user.authenticated = False
+
+    def end_whois(self, user):
+        message_copy = self.irc_users[user].messages
+        for message in message_copy:
+            message.resolve()
+            self.irc_users[user].messages.remove(message)
+
 
 class UserBot(IRCBot):
 
@@ -162,7 +233,15 @@ class UserBot(IRCBot):
     def privmsg(self, user, channel, message):
         """
         Handler if a private message is received
-        by an IRC user bot and addressed to self
+        by an IRC user bot. In IRC, this is when
+        the channel is a username.
+
+        Example:
+        [john]: /msg ocfstaffer-slack hello
+
+        user = "john"
+        channel = "ocfstaffer-slack"
+        message = "hello"
         """
         if channel == self.nickname:
             if not self.im_id:

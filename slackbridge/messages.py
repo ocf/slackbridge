@@ -55,31 +55,51 @@ class SlackMessage:
         channel_id = self.raw_message.get('channel')
         if not channel_id or not isinstance(channel_id, str):
             return
-
+            # |
         if channel_id[0] == 'D':  # DM channels start with a D
             if not user_bot.im_id:
                 user_bot.im_id = channel_id
 
-            # get irc target name from message
             if 'text' in self.raw_message:
                 match = re.search('(.*\w):', self.raw_message['text'])
                 if match:
-                    channel_name = match.group(1)
-                    self.raw_message['text'] = self.raw_message['text']\
-                        .replace(match.group(0), '')\
-                        .strip()
-                    if channel_name:
-                        self._post_pm_to_irc(channel_name, user_bot)
+                    recipient = match.group(1)
+                    if recipient in self.bridge_bot.irc_users:
+                        irc_user = self.bridge_bot.irc_users[recipient]
+                        if irc_user.authenticated:
+                            self.raw_message['text'] = \
+                                self.raw_message['text']\
+                                .replace(match.group(0), '')\
+                                .strip()
+
+                            self._post_pm_to_irc(recipient, user_bot)
+                            return
+                        else:
+                            self.bridge_bot.post_to_slack(
+                                self.bridge_bot.nickname,
+                                channel_id,
+                                'Error: ' + recipient + ' is '
+                                'either not online or not authenticated '
+                                'with NickServ. '
+                                'Message(s) were not delivered.', False)
+
+                            self.bridge_bot.authenticate(recipient)
+                            return
+                    else:
+                        # Defer message and attempt to authenticate user
+                        # Afterwards this message is re-resolved
+                        self.bridge_bot.irc_users[recipient] = IRCUser()
+                        self.bridge_bot.irc_users[recipient].add_message(self)
+
+                        self.bridge_bot.authenticate(recipient)
+                        return
+
                 else:
-                    log.msg(self.bridge_bot.sc.api_call(
-                        'chat.postMessage',
-                        channel=channel_id,
-                        text='Please message an '
-                        'IRC user with [username]: '
-                        '[message]',
-                        as_user=False,
-                        username=self.bridge_bot.nickname
-                    ))
+                    self.bridge_bot.post_to_slack(
+                        self.bridge_bot.nickname,
+                        channel_id,
+                        'Please message an IRC user '
+                        'with [username]: [message] ', False)
                     return
         elif channel_id in self.bridge_bot.channels:
             channel_name = self.bridge_bot.channels[channel_id]['name']
@@ -191,10 +211,10 @@ class SlackMessage:
             self.raw_message['text'],
         )
 
-    def _post_pm_to_irc(self, channel_name, user_bot):
+    def _post_pm_to_irc(self, irc_recipient, user_bot):
         user_bot.post_to_irc(
             user_bot.msg,
-            channel_name,
+            irc_recipient,
             self.raw_message['text'],
         )
 
@@ -209,3 +229,13 @@ class SlackMessage:
         if not hasattr(other, 'timestamp'):
             return NotImplemented
         return self.timestamp == other.timestamp
+
+
+class IRCUser:
+
+    def __init__(self, authenticated=False):
+        self.authenticated = authenticated
+        self.messages = []
+
+    def add_message(self, message):
+        self.messages.append(message)
