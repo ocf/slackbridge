@@ -96,7 +96,7 @@ def nick_from_irc_user(irc_user):
     return irc_user.split('!')[0]
 
 
-def format_irc_message(text, users, channels):
+def format_irc_message(text, users, bots, channels):
     """
     Replace channels, users, commands, links, emoji, and any remaining stuff in
     messages from Slack to things that IRC users would have an easier time
@@ -127,8 +127,10 @@ def format_irc_message(text, users, channels):
 
         if readable or user_id in users:
             return readable or users[user_id].nickname
+        elif user_id in bots:
+            return bots[user_id].nickname
         else:
-            return '(bot)'
+            return 'unknown'
 
     def var_replace(match):
         """
