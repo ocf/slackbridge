@@ -130,6 +130,7 @@ def format_irc_message(text, users, bots, channels):
         elif user_id in bots:
             return bots[user_id].nickname
         else:
+            # This should never occur
             return 'unknown'
 
     def var_replace(match):
