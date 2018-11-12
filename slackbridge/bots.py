@@ -18,6 +18,7 @@ class IRCBot(irc.IRCClient):
     channels = {}
     channel_name_to_uid = {}
     users = {}
+    bots = {}
     # Used to download slack files
     slack_token = None
 
@@ -185,5 +186,6 @@ class UserBot(IRCBot):
         method(channel, utils.format_irc_message(
             message,
             IRCBot.users,
+            IRCBot.bots,
             IRCBot.channels,
         ))

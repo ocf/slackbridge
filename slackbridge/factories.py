@@ -51,6 +51,7 @@ class BridgeBotFactory(BotFactory):
             self.nickserv_password,
             self.slack_uid,
         )
+        IRCBot.bots[self.slack_uid] = p
         p.factory = self
         self.resetDelay()
         return p
