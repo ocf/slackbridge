@@ -244,11 +244,13 @@ class UserBot(IRCBot):
         """
         if channel == self.nickname:
             if not self.im_id:
-                self.im_id = self.sc.api_call(
+                im_channel = self.sc.api_call(
                     'im.open',
                     user=self.user_id,
                     return_im=True
-                )['channel']['id']
+                )
+                self.im_id = im_channel['channel']['id']
+
             nick = utils.nick_from_irc_user(user)
             self.post_to_slack(user, self.im_id, nick + ': ' + message)
 
