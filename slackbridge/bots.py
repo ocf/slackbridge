@@ -110,7 +110,7 @@ class BridgeBot(IRCBot):
         while not self.message_queue.empty():
             message = self.message_queue.get()
             message.resolve()
-    """ #temp: block out setting topic to avoid spamming
+
     # Implements the IRCClient event handler of the same name,
     # which gets called when the topic changes, or when
     # a channel is entered for the first time.
@@ -123,7 +123,6 @@ class BridgeBot(IRCBot):
                 channel=channel_uid,
                 topic=new_topic
             )
-    """
 
     def irc_330(self, prefix, params):
         """

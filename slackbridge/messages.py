@@ -23,6 +23,7 @@ class SlackMessage:
     def __init__(self, raw_message, bridge_bot):
         self.raw_message = raw_message
         self.bridge_bot = bridge_bot
+        self.deferred = False
 
         if 'ts' in raw_message:
             self.timestamp = float(raw_message['ts'])
@@ -55,7 +56,7 @@ class SlackMessage:
         channel_id = self.raw_message.get('channel')
         if not channel_id or not isinstance(channel_id, str):
             return
-            # |
+
         if channel_id[0] == 'D':  # DM channels start with a D
             if not user_bot.im_id:
                 user_bot.im_id = channel_id
@@ -63,35 +64,35 @@ class SlackMessage:
             if 'text' in self.raw_message:
                 match = re.search('(.*\w):', self.raw_message['text'])
                 if match:
-                    recipient = match.group(1)
-                    if recipient in self.bridge_bot.irc_users:
-                        irc_user = self.bridge_bot.irc_users[recipient]
+                    rcpt = match.group(1)
+                    if rcpt in self.bridge_bot.irc_users and self.deferred:
+                        irc_user = self.bridge_bot.irc_users[rcpt]
                         if irc_user.authenticated:
                             self.raw_message['text'] = \
                                 self.raw_message['text']\
                                 .replace(match.group(0), '')\
                                 .strip()
 
-                            self._post_pm_to_irc(recipient, user_bot)
+                            self._post_pm_to_irc(rcpt, user_bot)
                             return
                         else:
                             self.bridge_bot.post_to_slack(
                                 self.bridge_bot.nickname,
                                 channel_id,
-                                'Error: ' + recipient + ' is '
+                                'Error: ' + rcpt + ' is '
                                 'either not online or not authenticated '
                                 'with NickServ. '
                                 'Message(s) were not delivered.', False)
-
-                            self.bridge_bot.authenticate(recipient)
                             return
                     else:
                         # Defer message and attempt to authenticate user
                         # Afterwards this message is re-resolved
-                        self.bridge_bot.irc_users[recipient] = IRCUser()
-                        self.bridge_bot.irc_users[recipient].add_message(self)
+                        self.deferred = True
 
-                        self.bridge_bot.authenticate(recipient)
+                        self.bridge_bot.irc_users[rcpt] = IRCUser()
+                        self.bridge_bot.irc_users[rcpt].add_message(self)
+
+                        self.bridge_bot.authenticate(rcpt)
                         return
 
                 else:
