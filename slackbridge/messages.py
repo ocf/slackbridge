@@ -68,22 +68,23 @@ class SlackMessage:
                     if rcpt in self.bridge_bot.irc_users and self.deferred:
                         irc_user = self.bridge_bot.irc_users[rcpt]
                         if irc_user.authenticated:
-                            self.raw_message['text'] = \
-                                self.raw_message['text']\
-                                .replace(match.group(0), '')\
-                                .strip()
+
+                            msg = self.raw_message['text']
+                            msg = msg.replace(match.group(0), '').strip()
+                            self.raw_message['text'] = msg
 
                             self._post_pm_to_irc(rcpt, user_bot)
-                            return
                         else:
+
+                            resp = 'Error: ' + rcpt + ' is ' \
+                                'either not online or not authenticated ' \
+                                'with NickServ. ' \
+                                'Message(s) were not delivered.'
+
                             self.bridge_bot.post_to_slack(
                                 self.bridge_bot.nickname,
                                 channel_id,
-                                'Error: ' + rcpt + ' is '
-                                'either not online or not authenticated '
-                                'with NickServ. '
-                                'Message(s) were not delivered.', False)
-                            return
+                                resp, False)
                     else:
                         # Defer message and attempt to authenticate user
                         # Afterwards this message is re-resolved
@@ -93,15 +94,17 @@ class SlackMessage:
                         self.bridge_bot.irc_users[rcpt].add_message(self)
 
                         self.bridge_bot.authenticate(rcpt)
-                        return
 
                 else:
+
+                    resp = 'Please message an IRC user ' \
+                        'with [username]: [message] '
+
                     self.bridge_bot.post_to_slack(
                         self.bridge_bot.nickname,
                         channel_id,
-                        'Please message an IRC user '
-                        'with [username]: [message] ', False)
-                    return
+                        resp, False)
+
         elif channel_id in self.bridge_bot.channels:
             channel_name = self.bridge_bot.channels[channel_id]['name']
             if message_type == 'message':

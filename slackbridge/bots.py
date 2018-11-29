@@ -30,8 +30,8 @@ class IRCBot(irc.IRCClient):
         self.nickname = nickname
         self.nickserv_password = nickserv_pw
 
-    def post_to_slack(self, user, channel, message, resolve_nick=True):
-        if resolve_nick:
+    def post_to_slack(self, user, channel, message, unparsed_nick=True):
+        if unparsed_nick:
             nick = utils.nick_from_irc_user(user)
         else:
             nick = user
@@ -176,10 +176,8 @@ class BridgeBot(IRCBot):
 
     def verify_auth(self, current_nickname, authenticated_name):
         user = self.irc_users[current_nickname]
-        if current_nickname == authenticated_name:
-            user.authenticated = True
-        else:
-            user.authenticated = False
+
+        user.authenticated = (current_nickname == authenticated_name)
 
     def end_whois(self, user):
         message_copy = self.irc_users[user].messages
