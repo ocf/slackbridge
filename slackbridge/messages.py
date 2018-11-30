@@ -62,15 +62,17 @@ class SlackMessage:
                 user_bot.im_id = channel_id
 
             if 'text' in self.raw_message:
-                match = re.search('(.*\w):', self.raw_message['text'])
+                match = re.search('^(([^:]+):).*$', self.raw_message['text'])
                 if match:
-                    rcpt = match.group(1)
+                    rcpt = match.group(2)
+
                     if rcpt in self.bridge_bot.irc_users and self.deferred:
                         irc_user = self.bridge_bot.irc_users[rcpt]
                         if irc_user.authenticated:
 
                             msg = self.raw_message['text']
-                            msg = msg.replace(match.group(0), '').strip()
+                            rcpt_quoted = match.group(1)
+                            msg = msg.replace(rcpt_quoted, '').strip()
                             self.raw_message['text'] = msg
 
                             self._post_pm_to_irc(rcpt, user_bot)
