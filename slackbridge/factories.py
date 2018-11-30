@@ -61,6 +61,7 @@ class BridgeBotFactory(BotFactory):
 
     def instantiate_bot(self, user):
         user_factory = UserBotFactory(
+            self.slack_client,
             self,
             user,
             self.bridge_nickname,
@@ -73,8 +74,9 @@ class BridgeBotFactory(BotFactory):
 
 class UserBotFactory(BotFactory):
 
-    def __init__(self, bridge_bot_factory, slack_user, target_group,
-                 nickserv_pw):
+    def __init__(self, slack_client, bridge_bot_factory, slack_user,
+                 target_group, nickserv_pw):
+        self.slack_client = slack_client
         self.bridge_bot_factory = bridge_bot_factory
         self.slack_user = slack_user
         self.joined_channels = []
@@ -87,6 +89,7 @@ class UserBotFactory(BotFactory):
 
     def buildProtocol(self, addr):
         p = UserBot(
+            self.slack_client,
             self.slack_user['name'],
             self.slack_user['real_name'],
             self.slack_user['id'],

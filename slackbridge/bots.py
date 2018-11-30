@@ -7,6 +7,7 @@ from twisted.python import log
 from twisted.words.protocols import irc
 
 import slackbridge.utils as utils
+from slackbridge.messages import IRCUser
 from slackbridge.messages import SlackMessage
 
 
@@ -21,16 +22,40 @@ class IRCBot(irc.IRCClient):
     bots = {}
     # Used to download slack files
     slack_token = None
+    sc = None
+    # Used to store lookup and deferred private messages
+    irc_users = {}
+
+    def __init__(self, sc, nickname, nickserv_pw):
+        self.sc = sc
+        self.nickname = nickname
+        self.nickserv_password = nickserv_pw
+
+    def post_to_slack(self, user, channel, message, unparsed_nick=True):
+        if unparsed_nick:
+            nick = utils.nick_from_irc_user(user)
+        else:
+            nick = user
+
+        # Don't post to Slack if it came from a Slack bot
+        if '-slack' not in nick and nick != 'defaultnick':
+            log.msg(self.sc.api_call(
+                'chat.postMessage',
+                channel=channel,
+                text=utils.format_slack_message(message, IRCBot.users),
+                as_user=False,
+                username=nick,
+                icon_url=utils.user_to_gravatar(nick),
+            ))
 
 
 class BridgeBot(IRCBot):
 
     def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid):
-        self.sc = sc
-        self.nickserv_password = nickserv_pw
         self.slack_uid = slack_uid
-        self.nickname = bridge_nick
         self.message_queue = queue.PriorityQueue()
+
+        super().__init__(sc, bridge_nick, nickserv_pw)
 
         self.rtm_connect()
 
@@ -64,19 +89,6 @@ class BridgeBot(IRCBot):
 
     def action(self, user, channel, message):
         self.post_to_slack(user, channel, '_{}_'.format(message))
-
-    def post_to_slack(self, user, channel, message):
-        nick = utils.nick_from_irc_user(user)
-        # Don't post to Slack if it came from a Slack bot
-        if '-slack' not in nick and nick != 'defaultnick':
-            log.msg(self.sc.api_call(
-                'chat.postMessage',
-                channel=channel,
-                text=utils.format_slack_message(message, IRCBot.users),
-                as_user=False,
-                username=nick,
-                icon_url=utils.user_to_gravatar(nick),
-            ))
 
     def check_slack_rtm(self):
         try:
@@ -113,19 +125,84 @@ class BridgeBot(IRCBot):
                 topic=new_topic
             )
 
+    def irc_330(self, prefix, params):
+        """
+        A 330-prefix response after a WHOIS [user] is sent
+        if [user] is registered AND authenticated.
+
+        Format of params:
+        [Querier, user, authenticated_name, 'is logged in as']
+        ['slack-bridge', 'jaw', 'jaw', 'is logged in as']
+        """
+        current_nickname = params[1]
+        authenticated_name = params[2]
+
+        self.verify_auth(current_nickname, authenticated_name)
+
+    def irc_RPL_ENDOFWHOIS(self, prefix, params):
+        """
+        RPL_ENDOFWHOIS signifies end of a WHOIS list for [user].
+
+        Format of params:
+        [Querier, user]
+        ['slack-bridge', 'jaw', 'End of /WHOIS list.']
+        """
+        user = params[1]
+
+        self.end_whois(user)
+
+    def userRenamed(self, user, newname):
+        self.deauthenticate(user)
+        self.deauthenticate(newname)
+
+    def userLeft(self, user, channel):
+        self.deauthenticate(user)
+
+    def userQuit(self, user, quitMessage):
+        self.deauthenticate(user)
+
+    def userKicked(self, user, channel, kicker, message):
+        self.deauthenticate(user)
+
+    def deauthenticate(self, user):
+        if user in self.irc_users:
+            self.irc_users.pop(user)
+
+    def authenticate(self, user):
+        if user not in self.irc_users:
+            self.irc_users[user] = IRCUser()
+        else:
+            self.irc_users[user].authenticated = False
+        self.whois(user)
+
+    def verify_auth(self, current_nickname, authenticated_name):
+        user = self.irc_users[current_nickname]
+
+        user.authenticated = (current_nickname == authenticated_name)
+
+    def end_whois(self, user):
+        message_copy = self.irc_users[user].messages
+        for message in message_copy:
+            message.resolve()
+            self.irc_users[user].messages.remove(message)
+
 
 class UserBot(IRCBot):
 
-    def __init__(self, nickname, realname, user_id, joined_channels,
+    def __init__(self, sc, nickname, realname, user_id, joined_channels,
                  target_group, nickserv_pw):
+        intended_nickname = '{}-slack'.format(utils.strip_nick(nickname))
+
+        self.sc = sc
         self.slack_name = nickname
-        self.nickname = '{}-slack'.format(utils.strip_nick(nickname))
-        self.intended_nickname = self.nickname
+        self.intended_nickname = intended_nickname
         self.realname = realname
         self.user_id = user_id
         self.joined_channels = joined_channels
-        self.nickserv_password = nickserv_pw
         self.target_group_nick = target_group
+        self.im_id = None
+
+        super().__init__(sc, intended_nickname, nickserv_pw)
 
     def log(self, method, message):
         full_message = '[{}]: {}'.format(self.nickname, message)
@@ -150,6 +227,31 @@ class UserBot(IRCBot):
                 self.target_group_nick,
                 self.nickserv_password,
             ))
+
+    def privmsg(self, user, channel, message):
+        """
+        Handler if a private message is received
+        by an IRC user bot. In IRC, this is when
+        the channel is a username.
+
+        Example:
+        [john]: /msg ocfstaffer-slack hello
+
+        user = "john"
+        channel = "ocfstaffer-slack"
+        message = "hello"
+        """
+        if channel == self.nickname:
+            if not self.im_id:
+                im_channel = self.sc.api_call(
+                    'im.open',
+                    user=self.user_id,
+                    return_im=True
+                )
+                self.im_id = im_channel['channel']['id']
+
+            nick = utils.nick_from_irc_user(user)
+            self.post_to_slack(user, self.im_id, nick + ': ' + message)
 
     def setNick(self, nickname):
         """
