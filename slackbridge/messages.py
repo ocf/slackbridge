@@ -72,7 +72,7 @@ class SlackMessage:
 
                             msg = self.raw_message['text']
                             rcpt_quoted = match.group(1)
-                            msg = msg.replace(rcpt_quoted, '').strip()
+                            msg = msg.replace(rcpt_quoted, '', 1).strip()
                             self.raw_message['text'] = msg
 
                             self._post_pm_to_irc(rcpt, user_bot)
