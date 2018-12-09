@@ -1,4 +1,5 @@
 servicePipeline(
+    upstreamProjects: [],
     deployTargets: ['slackbridge'],
 )
 
