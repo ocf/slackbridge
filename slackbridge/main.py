@@ -84,7 +84,7 @@ def main():
         slack_channels, slack_users,
     )
     reactor.connectSSL(
-        IRC_HOST, IRC_PORT, bridge_factory, ssl.ClientContextFactory()
+        IRC_HOST, IRC_PORT, bridge_factory, ssl.ClientContextFactory(),
     )
     reactor.run()
 

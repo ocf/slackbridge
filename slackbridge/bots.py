@@ -122,7 +122,7 @@ class BridgeBot(IRCBot):
             self.sc.api_call(
                 'channels.setTopic',
                 channel=channel_uid,
-                topic=new_topic
+                topic=new_topic,
             )
 
     def irc_330(self, prefix, params):
@@ -189,8 +189,10 @@ class BridgeBot(IRCBot):
 
 class UserBot(IRCBot):
 
-    def __init__(self, sc, nickname, realname, user_id, joined_channels,
-                 target_group, nickserv_pw):
+    def __init__(
+        self, sc, nickname, realname, user_id, joined_channels,
+        target_group, nickserv_pw,
+    ):
         intended_nickname = '{}-slack'.format(utils.strip_nick(nickname))
 
         self.sc = sc
@@ -223,10 +225,12 @@ class UserBot(IRCBot):
             self.msg('NickServ', 'IDENTIFY {}'.format(self.nickserv_password))
 
             # And if not, register for the first time,
-            self.msg('NickServ', 'GROUP {} {}'.format(
-                self.target_group_nick,
-                self.nickserv_password,
-            ))
+            self.msg(
+                'NickServ', 'GROUP {} {}'.format(
+                    self.target_group_nick,
+                    self.nickserv_password,
+                ),
+            )
 
     def privmsg(self, user, channel, message):
         """
@@ -246,7 +250,7 @@ class UserBot(IRCBot):
                 im_channel = self.sc.api_call(
                     'im.open',
                     user=self.user_id,
-                    return_im=True
+                    return_im=True,
                 )
                 self.im_id = im_channel['channel']['id']
 
@@ -285,9 +289,11 @@ class UserBot(IRCBot):
 
     def post_to_irc(self, method, channel, message):
         log.msg('User bot posting message to IRC')
-        method(channel, utils.format_irc_message(
-            message,
-            IRCBot.users,
-            IRCBot.bots,
-            IRCBot.channels,
-        ))
+        method(
+            channel, utils.format_irc_message(
+                message,
+                IRCBot.users,
+                IRCBot.bots,
+                IRCBot.channels,
+            ),
+        )

@@ -23,8 +23,10 @@ class BotFactory(ReconnectingClientFactory):
 
 class BridgeBotFactory(BotFactory):
 
-    def __init__(self, slack_client, bridge_nick, nickserv_pw, slack_uid,
-                 channels, users):
+    def __init__(
+        self, slack_client, bridge_nick, nickserv_pw, slack_uid,
+        channels, users,
+    ):
         self.slack_client = slack_client
         self.slack_uid = slack_uid
         self.bridge_nickname = bridge_nick
@@ -68,14 +70,16 @@ class BridgeBotFactory(BotFactory):
             self.nickserv_password,
         )
         reactor.connectSSL(
-            IRC_HOST, IRC_PORT, user_factory, ssl.ClientContextFactory()
+            IRC_HOST, IRC_PORT, user_factory, ssl.ClientContextFactory(),
         )
 
 
 class UserBotFactory(BotFactory):
 
-    def __init__(self, slack_client, bridge_bot_factory, slack_user,
-                 target_group, nickserv_pw):
+    def __init__(
+        self, slack_client, bridge_bot_factory, slack_user,
+        target_group, nickserv_pw,
+    ):
         self.slack_client = slack_client
         self.bridge_bot_factory = bridge_bot_factory
         self.slack_user = slack_user

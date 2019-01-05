@@ -86,7 +86,8 @@ class SlackMessage:
                             self.bridge_bot.post_to_slack(
                                 self.bridge_bot.nickname,
                                 channel_id,
-                                resp, False)
+                                resp, False,
+                            )
                     else:
                         # Defer message and attempt to authenticate user
                         # Afterwards this message is re-resolved
@@ -105,7 +106,8 @@ class SlackMessage:
                     self.bridge_bot.post_to_slack(
                         self.bridge_bot.nickname,
                         channel_id,
-                        resp, False)
+                        resp, False,
+                    )
 
         elif channel_id in self.bridge_bot.channels:
             channel_name = self.bridge_bot.channels[channel_id]['name']
@@ -137,8 +139,10 @@ class SlackMessage:
     def is_bot_user(self):
         """Sometimes bot_id is not included and other
         times it is passed as None. Checks both cases."""
-        return ('bot_id' in self.raw_message and
-                self.raw_message['bot_id'] is not None)
+        return (
+            'bot_id' in self.raw_message and
+            self.raw_message['bot_id'] is not None
+        )
 
     def _change_presence(self, user_bot):
         if self.raw_message['presence'] == 'away':
@@ -156,7 +160,7 @@ class SlackMessage:
     def _post_to_fluffy(self, channel_name, user_bot, file_data):
         # Adapted from https://api.slack.com/tutorials/working-with-files
         auth = {'Authorization': 'Bearer {}'.format(
-            self.bridge_bot.slack_token
+            self.bridge_bot.slack_token,
         )}
         r = requests.get(
             file_data['url_private'],
