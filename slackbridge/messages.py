@@ -93,7 +93,9 @@ class SlackMessage:
                         # Afterwards this message is re-resolved
                         self.deferred = True
 
-                        self.bridge_bot.irc_users[rcpt] = IRCUser()
+                        if rcpt not in self.bridge_bot.irc_users:
+                            self.bridge_bot.irc_users[rcpt] = IRCUser()
+
                         self.bridge_bot.irc_users[rcpt].add_message(self)
 
                         self.bridge_bot.authenticate(rcpt)
