@@ -48,9 +48,8 @@ def main():
 
     # Get all channels from Slack
     log.msg('Requesting list of channels from Slack...')
-    results = slack_api(sc, 'channels.list', exclude_archived=True)
+    results = slack_api(sc, 'conversations.list', exclude_archived=True, types="public_channel,private_channel")
     slack_channels = results['channels']
-
     # Get a proper list of members for each channel. We're forced to do this by
     # Slack API changes that don't return the full member list:
     # https://api.slack.com/changelog/2017-10-members-array-truncating
@@ -64,7 +63,9 @@ def main():
         channel['members'] = results['members']
 
         # Make sure all members have been added successfully
-        assert(len(results['members']) >= channel['num_members'])
+        # except for private channels with no 'num_members' property
+        if not channel['is_private']:
+            assert(len(results['members']) >= channel['num_members'])
 
     # Get all users from Slack, but don't select bots, deactivated users, or
     # slackbot, since they don't need IRC bots (they aren't users)
