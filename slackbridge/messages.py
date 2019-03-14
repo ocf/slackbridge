@@ -2,9 +2,11 @@ import functools
 import os
 import re
 import time
+from typing import List
 
 import requests
 from twisted.python import log
+
 
 # Subtypes of messages we don't want mirrored to IRC
 IGNORED_MSG_SUBTYPES = (
@@ -245,9 +247,9 @@ class SlackMessage:
 
 class IRCUser:
 
-    def __init__(self, authenticated=False):
+    def __init__(self, authenticated: bool = False):
         self.authenticated = authenticated
-        self.messages = []
+        self.messages: List[SlackMessage] = []
 
-    def add_message(self, message):
+    def add_message(self, message: SlackMessage) -> None:
         self.messages.append(message)

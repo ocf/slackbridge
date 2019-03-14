@@ -1,5 +1,8 @@
-import queue
 import time
+from queue import PriorityQueue
+from typing import Any
+from typing import Dict
+from typing import Optional
 
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
@@ -16,15 +19,15 @@ class IRCBot(irc.IRCClient):
     # information is not passed around everywhere and to not have to make a
     # Slack API call each time this information is wanted, since it doesn't
     # change often and can be updated by events.
-    channels = {}
-    channel_name_to_uid = {}
-    users = {}
-    bots = {}
+    channels: Dict[str, Dict[str, Any]] = {}
+    channel_name_to_uid: Dict[str, str] = {}
+    users: Dict[str, Any] = {}
+    bots: Dict[str, Any] = {}
     # Used to download slack files
-    slack_token = None
+    slack_token: Optional[str] = None
     sc = None
     # Used to store lookup and deferred private messages
-    irc_users = {}
+    irc_users: Dict[str, str] = {}
 
     def __init__(self, sc, nickname, nickserv_pw):
         self.sc = sc
@@ -53,7 +56,7 @@ class BridgeBot(IRCBot):
 
     def __init__(self, sc, bridge_nick, nickserv_pw, slack_uid):
         self.slack_uid = slack_uid
-        self.message_queue = queue.PriorityQueue()
+        self.message_queue: PriorityQueue[SlackMessage] = PriorityQueue()
 
         super().__init__(sc, bridge_nick, nickserv_pw)
 
