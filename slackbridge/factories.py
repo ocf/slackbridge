@@ -1,3 +1,5 @@
+from typing import List
+
 from twisted.internet import reactor
 from twisted.internet import ssl
 from twisted.internet.protocol import ReconnectingClientFactory
@@ -83,7 +85,7 @@ class UserBotFactory(BotFactory):
         self.slack_client = slack_client
         self.bridge_bot_factory = bridge_bot_factory
         self.slack_user = slack_user
-        self.joined_channels = []
+        self.joined_channels: List[str] = []
         self.target_group_nick = target_group
         self.nickserv_password = nickserv_pw
 
