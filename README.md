@@ -1,7 +1,7 @@
 slackbridge
 ===========
 
-[![Build Status](https://jenkins.ocf.berkeley.edu/buildStatus/icon?job=slackbridge/master)](https://jenkins.ocf.berkeley.edu/job/slackbridge/job/master/)
+[![Build Status](https://jenkins.ocf.berkeley.edu/buildStatus/icon?job=slackbridge/master)](https://jenkins.ocf.berkeley.edu/job/slackbridge/job/master/) [![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 
 A OCF bridge between OCF IRC and Slack
 
