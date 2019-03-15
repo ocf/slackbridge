@@ -7,7 +7,7 @@ test: venv install-hooks mypy
 
 .PHONY: mypy
 mypy: venv
-		venv/bin/mypy --ignore-missing-imports -p slackbridge --check-untyped-defs
+		venv/bin/mypy -p slackbridge
 
 .PHONY: dev
 dev: venv
