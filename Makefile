@@ -2,12 +2,9 @@ DOCKER_REVISION ?= testing-$(USER)
 DOCKER_TAG = docker-push.ocf.berkeley.edu/slackbridge:$(DOCKER_REVISION)
 
 .PHONY: test
-test: venv install-hooks mypy
+test: venv install-hooks
 		venv/bin/pre-commit run --all-files
-
-.PHONY: mypy
-mypy: venv
-		venv/bin/mypy -p slackbridge
+		venv/bin/mypy --ignore-missing-imports -p slackbridge --check-untyped-defs
 
 .PHONY: dev
 dev: venv
