@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import os
 import re
@@ -5,12 +7,14 @@ import time
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import TYPE_CHECKING
 
 import requests
 from twisted.python import log
 
-from slackbridge.bots import BridgeBot
-from slackbridge.bots import UserBot
+if TYPE_CHECKING:
+    from slackbridge.bots import BridgeBot
+    from slackbridge.bots import UserBot
 
 
 # Subtypes of messages we don't want mirrored to IRC

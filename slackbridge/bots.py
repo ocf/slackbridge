@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from queue import PriorityQueue
 from typing import Any
