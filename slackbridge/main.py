@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import sys
 from configparser import ConfigParser
@@ -16,7 +18,7 @@ from slackbridge.utils import slack_api
 BRIDGE_NICKNAME = 'slack-bridge'
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description='OCF IRC to Slack bridge',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,

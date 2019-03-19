@@ -1,11 +1,20 @@
+from __future__ import annotations
+
 import functools
 import os
 import re
 import time
+from typing import Any
+from typing import Dict
 from typing import List
+from typing import TYPE_CHECKING
 
 import requests
 from twisted.python import log
+
+if TYPE_CHECKING:
+    from slackbridge.bots import BridgeBot
+    from slackbridge.bots import UserBot
 
 
 # Subtypes of messages we don't want mirrored to IRC
@@ -22,7 +31,7 @@ FILEHOST = 'https://fluffy.cc'
 
 @functools.total_ordering
 class SlackMessage:
-    def __init__(self, raw_message, bridge_bot):
+    def __init__(self, raw_message: Dict[str, Any], bridge_bot: BridgeBot):
         self.raw_message = raw_message
         self.bridge_bot = bridge_bot
         self.deferred = False
@@ -32,7 +41,7 @@ class SlackMessage:
         else:
             self.timestamp = time.time()
 
-    def resolve(self):
+    def resolve(self) -> None:
         if ('type' not in self.raw_message or
                 'user' not in self.raw_message or
                 self.is_bot_user()):
@@ -140,7 +149,7 @@ class SlackMessage:
                 user_bot.leave(channel_name)
             return
 
-    def is_bot_user(self):
+    def is_bot_user(self) -> bool:
         """Sometimes bot_id is not included and other
         times it is passed as None. Checks both cases."""
         return (
@@ -148,20 +157,30 @@ class SlackMessage:
             self.raw_message['bot_id'] is not None
         )
 
-    def _change_presence(self, user_bot):
+    def _change_presence(self, user_bot: UserBot) -> None:
         if self.raw_message['presence'] == 'away':
             user_bot.away('Slack user inactive.')
         elif self.raw_message['presence'] == 'active':
             user_bot.back()
 
-    def _irc_me_action(self, channel_name, user_bot, action):
+    def _irc_me_action(
+        self,
+        channel_name: str,
+        user_bot: UserBot,
+        action: str,
+    ) -> None:
         user_bot.post_to_irc(
             user_bot.describe,
             '#' + channel_name,
             action,
         )
 
-    def _post_to_fluffy(self, channel_name, user_bot, file_data):
+    def _post_to_fluffy(
+        self,
+        channel_name: str,
+        user_bot: UserBot,
+        file_data: Dict[str, Any],
+    ) -> None:
         # Adapted from https://api.slack.com/tutorials/working-with-files
         auth = {'Authorization': 'Bearer {}'.format(
             self.bridge_bot.slack_token,
@@ -218,14 +237,14 @@ class SlackMessage:
             'uploaded a file: ' + location,
         )
 
-    def _post_to_irc(self, channel_name, user_bot):
+    def _post_to_irc(self, channel_name: str, user_bot: UserBot) -> None:
         user_bot.post_to_irc(
             user_bot.msg,
             '#' + channel_name,
             self.raw_message['text'],
         )
 
-    def _post_pm_to_irc(self, irc_recipient, user_bot):
+    def _post_pm_to_irc(self, irc_recipient: str, user_bot: UserBot) -> None:
         user_bot.post_to_irc(
             user_bot.msg,
             irc_recipient,
@@ -234,13 +253,13 @@ class SlackMessage:
 
     # For PriorityQueue to order by timestamp, override comparisons.
     # @total_ordering generates the other comparisons given the two below.
-    def __lt__(self, other):
-        if not hasattr(other, 'timestamp'):
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, SlackMessage):
             return NotImplemented
         return self.timestamp < other.timestamp
 
-    def __eq__(self, other):
-        if not hasattr(other, 'timestamp'):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SlackMessage):
             return NotImplemented
         return self.timestamp == other.timestamp
 

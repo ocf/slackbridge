@@ -1,9 +1,16 @@
+from __future__ import annotations
+
+from typing import Any
+from typing import Dict
 from typing import List
 
+from slackclient import SlackClient
 from twisted.internet import reactor
 from twisted.internet import ssl
+from twisted.internet.interfaces import IAddress
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.python import log
+from twisted.python.failure import Failure
 
 from slackbridge.bots import BridgeBot
 from slackbridge.bots import IRCBot
@@ -14,11 +21,11 @@ from slackbridge.utils import IRC_PORT
 
 class BotFactory(ReconnectingClientFactory):
 
-    def clientConnectionLost(self, connector, reason):
+    def clientConnectionLost(self, connector: Any, reason: Failure) -> None:
         log.err('Lost connection.  Reason: {}'.format(reason))
         super().clientConnectionLost(connector, reason)
 
-    def clientConnectionFailed(self, connector, reason):
+    def clientConnectionFailed(self, connector: Any, reason: Failure) -> None:
         log.err('Connection failed. Reason: {}'.format(reason))
         super().clientConnectionFailed(connector, reason)
 
@@ -26,8 +33,13 @@ class BotFactory(ReconnectingClientFactory):
 class BridgeBotFactory(BotFactory):
 
     def __init__(
-        self, slack_client, bridge_nick, nickserv_pw, slack_uid,
-        channels, users,
+        self,
+        slack_client: SlackClient,
+        bridge_nick: str,
+        nickserv_pw: str,
+        slack_uid: str,
+        channels: List[Dict[str, Any]],
+        users: List[Dict[str, Any]],
     ):
         self.slack_client = slack_client
         self.slack_uid = slack_uid
@@ -48,7 +60,7 @@ class BridgeBotFactory(BotFactory):
         for user in users:
             self.instantiate_bot(user)
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: IAddress) -> BridgeBot:
         p = BridgeBot(
             self.slack_client,
             self.bridge_nickname,
@@ -60,10 +72,10 @@ class BridgeBotFactory(BotFactory):
         self.resetDelay()
         return p
 
-    def add_user_bot(self, user_bot):
+    def add_user_bot(self, user_bot: UserBot) -> None:
         IRCBot.users[user_bot.user_id] = user_bot
 
-    def instantiate_bot(self, user):
+    def instantiate_bot(self, user: Dict[str, Any]) -> None:
         user_factory = UserBotFactory(
             self.slack_client,
             self,
@@ -79,8 +91,12 @@ class BridgeBotFactory(BotFactory):
 class UserBotFactory(BotFactory):
 
     def __init__(
-        self, slack_client, bridge_bot_factory, slack_user,
-        target_group, nickserv_pw,
+        self,
+        slack_client: SlackClient,
+        bridge_bot_factory: BridgeBotFactory,
+        slack_user: Dict[str, Any],
+        target_group: str,
+        nickserv_pw: str,
     ):
         self.slack_client = slack_client
         self.bridge_bot_factory = bridge_bot_factory
@@ -93,7 +109,7 @@ class UserBotFactory(BotFactory):
             if slack_user['id'] in channel['members']:
                 self.joined_channels.append(channel['name'])
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: IAddress) -> UserBot:
         p = UserBot(
             self.slack_client,
             self.slack_user['name'],

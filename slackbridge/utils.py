@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 import getpass
 import hashlib
 import re
 import sys
+from typing import Any
+from typing import Dict
+from typing import Match
 
+from slackclient import SlackClient
 from twisted.python import log
+
 
 GRAVATAR_URL = 'http://www.gravatar.com/avatar/{}?s=48&r=any&default=identicon'
 
@@ -52,7 +59,7 @@ EMOJIS = {
 }
 
 
-def user_to_gravatar(user):
+def user_to_gravatar(user: str) -> str:
     """
     We use Gravatar images for users when they are mirrored as a guess that
     they have the same IRC nick as their OCF username, and so the email
@@ -66,7 +73,7 @@ def user_to_gravatar(user):
     return GRAVATAR_URL.format(email_hash.hexdigest())
 
 
-def strip_nick(nick):
+def strip_nick(nick: str) -> str:
     """
     Strip a given Slack nickname to be IRC bot compatible. For instance, Slack
     allows users to have periods (.) in their name, but IRC does not allow
@@ -86,7 +93,7 @@ def strip_nick(nick):
     ])
 
 
-def nick_from_irc_user(irc_user):
+def nick_from_irc_user(irc_user: str) -> str:
     """
     User is like 'jvperrin!Jason@fireball.ocf.berkeley.edu' (nick!ident@host),
     but we only want the nickname so we can use that as the display user when
@@ -96,7 +103,12 @@ def nick_from_irc_user(irc_user):
     return irc_user.split('!')[0]
 
 
-def format_irc_message(text, users, bots, channels):
+def format_irc_message(
+    text: str,
+    users: Dict[str, Any],
+    bots: Dict[str, Any],
+    channels: Dict[str, Any],
+) -> str:
     """
     Replace channels, users, commands, links, emoji, and any remaining stuff in
     messages from Slack to things that IRC users would have an easier time
@@ -106,7 +118,7 @@ def format_irc_message(text, users, bots, channels):
     https://github.com/ekmartin/slack-irc/blob/2b5ceb7ca7beb/lib/bot.js#L154
     """
 
-    def chan_replace(match):
+    def chan_replace(match: Match[str]) -> str:
         """
         Replace channel references (e.g. "<#C6QASJWLA|rebuild>" with
         "#rebuild") to make them more readable
@@ -115,7 +127,7 @@ def format_irc_message(text, users, bots, channels):
         readable = match.group(2)
         return '#{}'.format(readable or channels[chan_id])
 
-    def user_replace(match):
+    def user_replace(match: Match[str]) -> str:
         """
         Replace user references (e.g. "<@U0QHZCXST>" with "jvperrin-slack") to
         make them more readable. Uses the Slack user's IRC bot as the nick to
@@ -133,7 +145,7 @@ def format_irc_message(text, users, bots, channels):
             # This should never occur
             return 'unknown'
 
-    def var_replace(match):
+    def var_replace(match: Match[str]) -> str:
         """
         Replace any variables sent from Slack with more readable counterparts
         (e.g. <!var|label> will display as <label> instead)
@@ -142,7 +154,7 @@ def format_irc_message(text, users, bots, channels):
         label = match.group(2)
         return '<{}>'.format(label or var)
 
-    def emoji_replace(match):
+    def emoji_replace(match: Match[str]) -> str:
         """
         Replace any emoji from Slack with more text-readable equivalents if
         they exist in the EMOJIS dict mapping (e.g. ":smile:" maps to ":D")
@@ -179,7 +191,7 @@ def format_irc_message(text, users, bots, channels):
     return text
 
 
-def format_slack_message(text, users):
+def format_slack_message(text: str, users: Dict[str, Any]) -> str:
     """
     Strip any color codes coming from IRC, since Slack cannot display them
     The current solution is taken from https://stackoverflow.com/a/970723
@@ -190,7 +202,7 @@ def format_slack_message(text, users):
     TODO: Preserve bold and italics (convert to markdown?)
     """
 
-    def nick_replace(match):
+    def nick_replace(match: Match[str]) -> str:
         """
         Replace any IRC nick of the form keur-slack to <@keur> if it's in
         the provided list of Slack display names. To prevent accidental
@@ -209,7 +221,7 @@ def format_slack_message(text, users):
     return text
 
 
-def slack_api(slack_client, *args, **kwargs):
+def slack_api(slack_client: SlackClient, *args: Any, **kwargs: Any) -> Any:
     results = slack_client.api_call(*args, **kwargs)
     if results['ok']:
         return results
