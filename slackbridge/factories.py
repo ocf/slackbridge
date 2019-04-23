@@ -22,11 +22,11 @@ from slackbridge.utils import IRC_PORT
 class BotFactory(ReconnectingClientFactory):
 
     def clientConnectionLost(self, connector: Any, reason: Failure) -> None:
-        log.err('Lost connection.  Reason: {}'.format(reason))
+        log.err(f'Lost connection.  Reason: {reason}')
         super().clientConnectionLost(connector, reason)
 
     def clientConnectionFailed(self, connector: Any, reason: Failure) -> None:
-        log.err('Connection failed. Reason: {}'.format(reason))
+        log.err(f'Connection failed. Reason: {reason}')
         super().clientConnectionFailed(connector, reason)
 
 

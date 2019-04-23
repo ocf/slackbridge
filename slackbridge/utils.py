@@ -68,7 +68,7 @@ def user_to_gravatar(user: str) -> str:
     most (active) staff.
     """
     email_hash = hashlib.md5()
-    email = '{}@ocf.berkeley.edu'.format(user)
+    email = f'{user}@ocf.berkeley.edu'
     email_hash.update(email.encode())
     return GRAVATAR_URL.format(email_hash.hexdigest())
 
@@ -169,7 +169,7 @@ def format_irc_message(
         emoji = match.group(1)
         if emoji in EMOJIS:
             return EMOJIS[emoji]
-        return ':{}:'.format(emoji)
+        return f':{emoji}:'
 
     # Remove newlines and carriage returns, since IRC doesn't have multi-line
     # messages, but Slack allows them
@@ -212,7 +212,7 @@ def format_slack_message(text: str, users: Dict[str, Any]) -> str:
         nick = match.group(1)
         for user in users.values():
             if nick == user.slack_name:
-                return '<@{}>'.format(nick)
+                return f'<@{nick}>'
         return match.group(0)
 
     text = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', text, flags=re.UNICODE)
@@ -226,6 +226,6 @@ def slack_api(slack_client: SlackClient, *args: Any, **kwargs: Any) -> Any:
     if results['ok']:
         return results
     else:
-        log.err('Error calling Slack API: {}'.format(results))
+        log.err(f'Error calling Slack API: {results}')
         # TODO: Handle this better than exiting
         sys.exit(1)
