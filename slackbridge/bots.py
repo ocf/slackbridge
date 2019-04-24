@@ -100,7 +100,7 @@ class BridgeBot(IRCBot):
         log.msg('Connected successfully to Slack RTM')
 
     def signedOn(self) -> None:
-        self.msg('NickServ', 'identify {}'.format(self.nickserv_password))
+        self.msg('NickServ', f'identify {self.nickserv_password}')
         log.msg('Authenticated with NickServ')
 
         for channel in self.channels.values():
@@ -111,7 +111,7 @@ class BridgeBot(IRCBot):
         self.post_to_slack(user, channel, message)
 
     def action(self, user: str, channel: str, message: str) -> None:
-        self.post_to_slack(user, channel, '_{}_'.format(message))
+        self.post_to_slack(user, channel, f'_{message}_')
 
     def check_slack_rtm(self) -> None:
         try:
@@ -246,14 +246,14 @@ class UserBot(IRCBot):
         super().__init__(sc, intended_nickname, nickserv_pw)
 
     def log(self, method: Callable[[str], T], message: str) -> T:
-        full_message = '[{}]: {}'.format(self.nickname, message)
+        full_message = f'[{self.nickname}]: {message}'
         return method(full_message)
 
     def signedOn(self) -> None:
         self.nickserv_auth()
 
         for channel_name in self.joined_channels:
-            self.log(log.msg, 'Joining #{}'.format(channel_name))
+            self.log(log.msg, f'Joining #{channel_name}')
             self.join(channel_name)
 
         self.away('Default away for startup.')
@@ -261,7 +261,7 @@ class UserBot(IRCBot):
     def nickserv_auth(self) -> None:
         if self.nickname == self.intended_nickname:
             # If already registered, authenticate yourself to Nickserv
-            self.msg('NickServ', 'IDENTIFY {}'.format(self.nickserv_password))
+            self.msg('NickServ', f'IDENTIFY {self.nickserv_password}')
 
             # And if not, register for the first time,
             self.msg(
