@@ -56,14 +56,16 @@ class IRCBot(irc.IRCClient):
 
         # Don't post to Slack if it came from a Slack bot
         if '-slack' not in nick and nick != 'defaultnick':
-            log.msg(self.sc.api_call(
-                'chat.postMessage',
-                channel=channel,
-                text=utils.format_slack_message(message, IRCBot.users),
-                as_user=False,
-                username=nick,
-                icon_url=utils.user_to_gravatar(nick),
-            ))
+            log.msg(
+                self.sc.api_call(
+                    'chat.postMessage',
+                    channel=channel,
+                    text=utils.format_slack_message(message, IRCBot.users),
+                    as_user=False,
+                    username=nick,
+                    icon_url=utils.user_to_gravatar(nick),
+                ),
+            )
 
 
 class BridgeBot(IRCBot):

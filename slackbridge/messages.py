@@ -42,9 +42,11 @@ class SlackMessage:
             self.timestamp = time.time()
 
     def resolve(self) -> None:
-        if ('type' not in self.raw_message or
-                'user' not in self.raw_message or
-                self.is_bot_user()):
+        if (
+            'type' not in self.raw_message or
+            'user' not in self.raw_message or
+            self.is_bot_user()
+        ):
             return
 
         message_type = self.raw_message['type']
@@ -182,18 +184,22 @@ class SlackMessage:
         file_data: Dict[str, Any],
     ) -> None:
         # Adapted from https://api.slack.com/tutorials/working-with-files
-        auth = {'Authorization': 'Bearer {}'.format(
-            self.bridge_bot.slack_token,
-        )}
+        auth = {
+            'Authorization': 'Bearer {}'.format(
+                self.bridge_bot.slack_token,
+            ),
+        }
         r = requests.get(
             file_data['url_private'],
             headers=auth,
             stream=True,
         )
         if r.status_code != 200:
-            log.err('Could not GET image from: {}'.format(
-                file_data['url_private'],
-            ))
+            log.err(
+                'Could not GET image from: {}'.format(
+                    file_data['url_private'],
+                ),
+            )
             return
 
         # Ensure file has an extension as this is necessary
@@ -209,8 +215,10 @@ class SlackMessage:
             FILEHOST + '/upload?json',
             files={'file': (filename, r.raw)},
         )
-        if (r.status_code == 413 and
-                file_data['url_private'] != file_data['thumb_1024']):
+        if (
+            r.status_code == 413 and
+            file_data['url_private'] != file_data['thumb_1024']
+        ):
             # file is too large, so force the use of the 1024 thumb
             file_data['url_private'] = file_data['thumb_1024']
             return self._post_to_fluffy(
@@ -219,9 +227,11 @@ class SlackMessage:
                 file_data,
             )
         elif r.status_code != 200:
-            log.err('Failed to upload (status code {}):'.format(
-                r.status_code,
-            ))
+            log.err(
+                'Failed to upload (status code {}):'.format(
+                    r.status_code,
+                ),
+            )
             return
 
         resp = r.json()
