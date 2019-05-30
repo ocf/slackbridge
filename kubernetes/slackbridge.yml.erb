@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment
+  labels:
+    app: slackbridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: slackbridge
+  template:
+    metadata:
+      labels:
+        app: slackbridge
+    spec:
+      containers:
+        - name: slackbridge
+          image: "docker.ocf.berkeley.edu/slackbridge:<%= version %>"
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: 1
+          volumeMounts:
+            - mountPath: /etc/ocf-slackbridge
+              name: secrets
+      volumes:
+        - name: secrets
+          hostPath:
+            path: /opt/share/docker/secrets/slackbridge
+            type: Directory
+      dnsPolicy: ClusterFirst
+      dnsConfig:
+        searches:
+          - "ocf.berkeley.edu"
