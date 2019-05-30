@@ -1,6 +1,6 @@
 servicePipeline(
     upstreamProjects: [],
-    deployTargets: ['slackbridge'],
+    deployTargets: [],
 )
 
 // vim: ft=groovy
