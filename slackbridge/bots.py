@@ -143,7 +143,16 @@ class BridgeBot(IRCBot):
     def topicUpdated(self, user: str, channel: str, new_topic: str) -> None:
         channel_uid = self.channel_name_to_uid[channel[1:]]
         last_topic = self.channels[channel_uid]['topic']['value']
-        if new_topic != last_topic:
+
+        # Make sure to strip formatting from the previous topic, otherwise the
+        # topic will update on every restart, even when it doesn't need to
+        cleaned_last_topic = utils.format_irc_message(
+            last_topic,
+            IRCBot.users,
+            IRCBot.bots,
+            IRCBot.channels,
+        )
+        if new_topic != cleaned_last_topic:
             self.sc.api_call(
                 'channels.setTopic',
                 channel=channel_uid,
