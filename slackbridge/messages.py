@@ -143,6 +143,7 @@ class SlackMessage:
                         user_bot,
                         file,
                     )
+
                 log.msg('Posting message to IRC')
                 self._post_to_irc(channel_name, user_bot)
             elif message_type == 'member_joined_channel':
@@ -217,9 +218,12 @@ class SlackMessage:
         )
         if (
             r.status_code == 413 and
+            'thumb_1024' in file_data and
             file_data['url_private'] != file_data['thumb_1024']
         ):
             # file is too large, so force the use of the 1024 thumb
+            # Note: this only works with images, other files, for instance
+            # videos, do not have the thumb_1024 attribute
             file_data['url_private'] = file_data['thumb_1024']
             return self._post_to_fluffy(
                 channel_name,
