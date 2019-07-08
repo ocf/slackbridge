@@ -8,11 +8,14 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import TypeVar
+from typing import Union
 
+from ocflib.misc.mail import send_problem_report
 from slackclient import SlackClient
 from twisted.internet import reactor
 from twisted.internet.task import LoopingCall
 from twisted.python import log
+from twisted.python.failure import Failure
 from twisted.words.protocols import irc
 
 import slackbridge.utils as utils
@@ -68,6 +71,40 @@ class IRCBot(irc.IRCClient):
             )
 
 
+class LoopHandler():
+    """Bröther may I have some lööps?
+
+    More seriously, this is a wrapper around a LoopingCall function that
+    handles errors as they come up and restarts the LoopingCall again. This is
+    useful to be able to make slackbridge more reliable and not crash if some
+    invalid input is given or some message handling code breaks for instance.
+    """
+
+    def __init__(self, method: Callable[[], Any], delay: Union[int, float]):
+        self.method = method
+        self.delay = delay
+
+    def start_loop(self) -> None:
+        """Loop on a method with a delay, and catch any errors that come up.
+        If any errors do occur, restart the looping method again"""
+        loop = LoopingCall(self.method)
+        deferred = loop.start(self.delay)
+        deferred.addErrback(
+            self.handle_loop_error,
+            self,
+        )
+
+    @staticmethod
+    def handle_loop_error(err: Failure, loop_handler: LoopHandler) -> None:
+        """Handle errors in a looping function and restart the loop."""
+        send_problem_report(err)
+        err.printTraceback()
+        # Sleep to avoid tight infinite loops spamming emails
+        time.sleep(3)
+        # Restart the given method
+        loop_handler.start_loop()
+
+
 class BridgeBot(IRCBot):
 
     def __init__(
@@ -83,19 +120,13 @@ class BridgeBot(IRCBot):
         super().__init__(sc, bridge_nick, nickserv_pw)
 
         self.rtm_connect()
-
-        # Create a looping call to poll Slack for updates
-        rtm_loop = LoopingCall(self.check_slack_rtm)
-        # Slack's rate limit is 1 request per second, so set this to something
-        # greater than or equal to that to avoid problems
-        rtm_loop.start(1)
-
-        # Create another looping call which acts on messages in the queue
-        message_loop = LoopingCall(self.empty_queue)
-        message_loop.start(0.5)
+        rtm_handler = LoopHandler(method=self.check_slack_rtm, delay=1)
+        queue_handler = LoopHandler(method=self.empty_queue, delay=0.5)
+        rtm_handler.start_loop()
+        queue_handler.start_loop()
 
     def rtm_connect(self) -> None:
-        # Attempt to connect to Slack RTM
+        """Attempt to connect to Slack RTM."""
         while not self.sc.rtm_connect(auto_reconnect=True):
             log.err('Could not connect to Slack RTM, check token/rate limits')
             time.sleep(5)
