@@ -50,7 +50,7 @@ def main() -> None:
 
     # Get all channels from Slack
     log.msg('Requesting list of channels from Slack...')
-    results = slack_api(sc, 'channels.list', exclude_archived=True)
+    results = slack_api(sc, 'conversations.list', exclude_archived=True)
     slack_channels = results['channels']
 
     # Get a proper list of members for each channel. We're forced to do this by
