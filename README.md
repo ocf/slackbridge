@@ -27,4 +27,5 @@ config, run:
 
 instead, but if you are developing on supernova, you should not have to do this.
 `slackbridge.conf` contains the Slack API token, IRC NickServ password, etc. so
-it is meant to be kept secret.
+it is meant to be kept secret, but there is a sample config file provided at
+`slackbridge.conf.sample` to show the structure of the file.
