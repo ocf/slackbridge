@@ -1,0 +1,15 @@
+[irc]
+# This is a nickserv password for the IRC bot. Currently the bot name is
+# hardcoded to 'slack-bridge' but it has many bots that join under the name of
+# '#{user}-slack' that will also be registered with the same nickserv pass.
+nickserv_pass=your_bot_nickserv_password
+
+[slack]
+# The token to authenticate to Slack with
+token=xoxb-00000000000-aaaaaaaaaaaaaaaaaaaaaaaa
+# This is the user ID of the bot user on the Slack side of things, this is just
+# used so that the bot knows who it is on Slack.
+#
+# TODO: Try to get this from Slack's API instead. users.identity doesn't appear
+# to work with legacy tokens, so this might need some authentication redesign
+user=UAAAAAAAA
