@@ -4,7 +4,7 @@ import getpass
 import hashlib
 import re
 import sys
-import emoji
+from emoji import emojize
 from typing import Any
 from typing import Dict
 from typing import Match
@@ -129,7 +129,7 @@ def format_irc_message(
     text = re.sub(r'<\@(U\w+)\|?(\w+)?>', user_replace, text)
     text = re.sub(r'<!(\w+)\|?(\w+)?>', var_replace, text)
     text = re.sub(r'<(?!!)([^|]+?)>', lambda match: match.group(1), text)
-    text = re.sub(r':([\d\w+-]+):', emoji.emojize(match.group(1)), text)
+    text = re.sub(r':([\d\w+-]+):', emojize(match.group(1)), text)
     text = re.sub(r'<.+?\|(.+?)>', lambda match: match.group(1), text)
 
     # Slack gives <, >, and & as HTML-encoded entities, so we want to decode
