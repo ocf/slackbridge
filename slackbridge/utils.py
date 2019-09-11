@@ -4,6 +4,7 @@ import getpass
 import hashlib
 import re
 import sys
+import emoji
 from typing import Any
 from typing import Dict
 from typing import Match
@@ -166,10 +167,25 @@ def format_irc_message(
         TODO: Map emoji to the unicode equivalent if they are not found in the
         simple mapping above.
         """
-        emoji = match.group(1)
-        if emoji in EMOJIS:
-            return EMOJIS[emoji]
-        return f':{emoji}:'
+        def emoji_replace(match: Match[str]) -> str:
+            """
+            Replace any emoji from Slack with more text-readable equivalents if
+            they exist in the EMOJIS dict mapping (e.g. ":smile:" maps to ":D")
+            If a mapping doesn't exist, it will just display the emoji as it was
+            before, and hopefully the text explanation is enough. We can't hope to
+            cover all emoji either, as they are a ton of them, not all have text
+            representations, and you can even add custom ones to Slack!
+
+            TODO: Map emoji to the unicode equivalent if they are not found in the
+            simple mapping above.
+            """
+            emoji = match.group(1)
+            unicode_emoji = emoji.emojize(f':{emoji}:', use_aliases=True)
+            if unicode_emoji != f':{emoji}:':
+                return unicode_emoji
+            if emoji in EMOJIS:
+                return EMOJIS[emoji]
+            return f':{emoji}:'
 
     # Remove newlines and carriage returns, since IRC doesn't have multi-line
     # messages, but Slack allows them
