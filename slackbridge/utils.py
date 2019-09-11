@@ -129,7 +129,7 @@ def format_irc_message(
     text = re.sub(r'<\@(U\w+)\|?(\w+)?>', user_replace, text)
     text = re.sub(r'<!(\w+)\|?(\w+)?>', var_replace, text)
     text = re.sub(r'<(?!!)([^|]+?)>', lambda match: match.group(1), text)
-    text = emojize(re.sub(r':([\d\w+-]+):', lambda match: match.group(1), text))
+    text = emojize(text, use_aliases=True)
     text = re.sub(r'<.+?\|(.+?)>', lambda match: match.group(1), text)
 
     # Slack gives <, >, and & as HTML-encoded entities, so we want to decode
