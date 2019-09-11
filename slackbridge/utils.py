@@ -135,7 +135,6 @@ def format_irc_message(
     # Slack gives <, >, and & as HTML-encoded entities, so we want to decode
     # them before posting them to IRC
     text = text.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
-    print(text)
     return text
 
 
