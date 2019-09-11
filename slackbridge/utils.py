@@ -22,43 +22,6 @@ else:
 
 IRC_PORT = 6697
 
-# TODO: Actually have a more complete mapping of emoji names to symbols
-EMOJIS = {
-    '+1': '+1',
-    '-1': '-1',
-    'angry': '>:(',
-    'anguished': 'D:',
-    'astonished': ':O',
-    'broken_heart': '</3',
-    'confused': ':/',
-    'cry': ':\'(',
-    'disappointed': ':(',
-    'frowning': ':(',
-    'grin': ':D',
-    'heart': '<3',
-    'kiss': ':*',
-    'laughing': 'xD',
-    'monkey_face': ':o)',
-    'neutral_face': ':|',
-    'no_mounth': ':-',
-    'open_mouth': ':o',
-    'simple_smile': ':)',
-    'slightly_smiling_face': ':)',
-    'smile': ':D',
-    'smiley': ':-)',
-    'smirk': ';)',
-    'stuck_out_tongue': ':P',
-    'stuck_out_tongue_winking_eye': ';P',
-    'sunglasses': '8)',
-    'sweat': '\':(',
-    'sweat_smile': '\':)',
-    'tired_face': 'x.x',
-    'thumbsdown': '-1',
-    'thumbsup': '+1',
-    'weary': 'x.x',
-    'wink': ';)',
-}
-
 
 def user_to_gravatar(user: str) -> str:
     """
@@ -155,27 +118,6 @@ def format_irc_message(
         label = match.group(2)
         return '<{}>'.format(label or var)
 
-
-    def emoji_replace(match: Match[str]) -> str:
-        """
-        Replace any emoji from Slack with more text-readable equivalents if
-        they exist in the EMOJIS dict mapping (e.g. ":smile:" maps to ":D")
-        If a mapping doesn't exist, it will just display the emoji as it was
-        before, and hopefully the text explanation is enough. We can't hope to
-        cover all emoji either, as they are a ton of them, not all have text
-        representations, and you can even add custom ones to Slack!
-
-        TODO: Map emoji to the unicode equivalent if they are not found in the
-        simple mapping above.
-        """
-        emoji = match.group(1)
-        unicode_emoji = emoji.emojize(f':{emoji}:', use_aliases=True)
-        if unicode_emoji != f':{emoji}:':
-            return unicode_emoji
-        if emoji in EMOJIS:
-            return EMOJIS[emoji]
-        return f':{emoji}:'
-
     # Remove newlines and carriage returns, since IRC doesn't have multi-line
     # messages, but Slack allows them
     text = re.sub(r'\n|\r', ' ', text)
@@ -187,7 +129,7 @@ def format_irc_message(
     text = re.sub(r'<\@(U\w+)\|?(\w+)?>', user_replace, text)
     text = re.sub(r'<!(\w+)\|?(\w+)?>', var_replace, text)
     text = re.sub(r'<(?!!)([^|]+?)>', lambda match: match.group(1), text)
-    text = re.sub(r':([\d\w+-]+):', emoji_replace, text)
+    text = re.sub(r':([\d\w+-]+):', emoji.emojize(match.group(1)), text)
     text = re.sub(r'<.+?\|(.+?)>', lambda match: match.group(1), text)
 
     # Slack gives <, >, and & as HTML-encoded entities, so we want to decode
