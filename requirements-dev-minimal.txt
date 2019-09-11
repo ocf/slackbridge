@@ -1,3 +1,4 @@
 mypy
 pre-commit
 requirements-tools
+emoji
