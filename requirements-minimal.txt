@@ -1,5 +1,5 @@
+emoji
 ocflib
 pyOpenSSL
 slackclient<2
 Twisted
-emoji

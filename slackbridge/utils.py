@@ -4,11 +4,11 @@ import getpass
 import hashlib
 import re
 import sys
-from emoji import emojize
 from typing import Any
 from typing import Dict
 from typing import Match
 
+from emoji import emojize
 from slackclient import SlackClient
 from twisted.python import log
 
