@@ -1,3 +1,4 @@
+emoji
 ocflib
 pyOpenSSL
 slackclient<2
