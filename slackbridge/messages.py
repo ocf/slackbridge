@@ -252,18 +252,20 @@ class SlackMessage:
         )
 
     def _post_to_irc(self, channel_name: str, user_bot: UserBot) -> None:
-        user_bot.post_to_irc(
-            user_bot.msg,
-            '#' + channel_name,
-            self.raw_message['text'],
-        )
+        for line in self.raw_message['text'].splitlines():
+            user_bot.post_to_irc(
+                user_bot.msg,
+                '#' + channel_name,
+                line,
+            )
 
     def _post_pm_to_irc(self, irc_recipient: str, user_bot: UserBot) -> None:
-        user_bot.post_to_irc(
-            user_bot.msg,
-            irc_recipient,
-            self.raw_message['text'],
-        )
+        for line in self.raw_message['text'].splitlines():
+            user_bot.post_to_irc(
+                user_bot.msg,
+                irc_recipient,
+                line,
+            )
 
     # For PriorityQueue to order by timestamp, override comparisons.
     # @total_ordering generates the other comparisons given the two below.
