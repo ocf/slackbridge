@@ -62,6 +62,11 @@ def main() -> None:
     # Slack API changes that don't return the full member list:
     # https://api.slack.com/changelog/2017-10-members-array-truncating
     for channel in slack_channels:
+        # Querying Slack for members of an empty channel causes an error
+        if channel['num_members'] == 0:
+            channel['members'] = []
+            continue
+
         results = slack_api(
             sc,
             'conversations.members',
