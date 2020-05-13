@@ -185,7 +185,7 @@ class BridgeBot(IRCBot):
         )
         if new_topic != cleaned_last_topic:
             self.sc.api_call(
-                'channels.setTopic',
+                'conversations.setTopic',
                 channel=channel_uid,
                 topic=new_topic,
             )
@@ -329,8 +329,8 @@ class UserBot(IRCBot):
         if channel == self.nickname:
             if self.im_id is None:
                 im_channel = self.sc.api_call(
-                    'im.open',
-                    user=self.user_id,
+                    'conversations.open',
+                    users=self.user_id,
                     return_im=True,
                 )
                 self.im_id = im_channel['channel']['id']
