@@ -1,5 +1,0 @@
-#!/bin/bash
-set -euxo pipefail
-exec 2>&1
-cd /opt/slackbridge
-exec python -m slackbridge.main

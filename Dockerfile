@@ -8,7 +8,6 @@ RUN apt-get update \
         libffi-dev \
         libssl-dev \
         python3.7-dev \
-        runit \
         virtualenv \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -27,12 +26,9 @@ RUN chown -R nobody:nogroup /opt/slackbridge
 # cached layers makes rebuilding faster since it doesn't have to chown the whole
 # project again (including vendored stuff)
 COPY slackbridge /opt/slackbridge/slackbridge
-COPY services /opt/slackbridge/services
 RUN chown -R nobody:nogroup /opt/slackbridge/slackbridge
-RUN chown -R nobody:nogroup /opt/slackbridge/services
 
 USER nobody
 
 WORKDIR /opt/slackbridge
-ENV PATH=/opt/slackbridge/venv/bin:$PATH
-CMD ["runsvdir", "/opt/slackbridge/services"]
+CMD ["/opt/slackbridge/venv/bin/python", "-m", "slackbridge.main"]
