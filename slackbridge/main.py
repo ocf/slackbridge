@@ -74,9 +74,18 @@ def main() -> None:
             channel=channel['id'],
         )
         channel['members'] = results['members']
+        while results['response_metadata']['next_cursor']:
+            results = slack_api(
+                sc,
+                'conversations.members',
+                limit=500,
+                channel=channel['id'],
+                cursor=results['response_metadata']['next_cursor'],
+            )
+            channel['members'] += results['members']
 
         # Make sure all members have been added successfully
-        assert(len(results['members']) >= channel['num_members'])
+        assert(len(channel['members']) >= channel['num_members'])
 
     # Get all users from Slack, but don't select bots, deactivated users, or
     # slackbot, since they don't need IRC bots (they aren't users)
