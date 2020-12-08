@@ -1,4 +1,4 @@
-exclude: ^vendor/
+exclude: ^vendor/|^\.activate.sh
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.2.1
