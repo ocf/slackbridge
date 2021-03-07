@@ -1,5 +1,6 @@
+cryptography<=3.3.2 # Due to Rust requirements (ok to remove once rustc is puppeted or we just install Rust in the container)
 emoji
 ocflib
 pyOpenSSL
 slackclient<2
-Twisted
+Twisted<=20.3.0 # Newer Twisted has incomplete type stubs, so we hold it back for now
