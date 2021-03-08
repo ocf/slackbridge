@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from typing import Any
-from typing import Dict
-from typing import List
 
 from slackclient import SlackClient
 from twisted.internet import reactor

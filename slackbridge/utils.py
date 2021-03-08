@@ -5,7 +5,6 @@ import hashlib
 import re
 import sys
 from typing import Any
-from typing import Dict
 from typing import Match
 
 from emoji import emojize

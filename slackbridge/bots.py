@@ -4,11 +4,7 @@ import time
 from queue import PriorityQueue
 from typing import Any
 from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
 from typing import TypeVar
-from typing import Union
 
 from ocflib.misc.mail import send_problem_report
 from slackclient import SlackClient
