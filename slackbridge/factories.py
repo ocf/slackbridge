@@ -38,8 +38,8 @@ class BridgeBotFactory(BotFactory):
         bridge_nick: str,
         nickserv_pw: str,
         slack_uid: str,
-        channels: List[Dict[str, Any]],
-        users: List[Dict[str, Any]],
+        channels: list[dict[str, Any]],
+        users: list[dict[str, Any]],
     ):
         self.slack_client = slack_client
         self.slack_uid = slack_uid
@@ -75,7 +75,7 @@ class BridgeBotFactory(BotFactory):
     def add_user_bot(self, user_bot: UserBot) -> None:
         IRCBot.users[user_bot.user_id] = user_bot
 
-    def instantiate_bot(self, user: Dict[str, Any]) -> None:
+    def instantiate_bot(self, user: dict[str, Any]) -> None:
         user_factory = UserBotFactory(
             self.slack_client,
             self,
@@ -94,14 +94,14 @@ class UserBotFactory(BotFactory):
         self,
         slack_client: SlackClient,
         bridge_bot_factory: BridgeBotFactory,
-        slack_user: Dict[str, Any],
+        slack_user: dict[str, Any],
         target_group: str,
         nickserv_pw: str,
     ):
         self.slack_client = slack_client
         self.bridge_bot_factory = bridge_bot_factory
         self.slack_user = slack_user
-        self.joined_channels: List[str] = []
+        self.joined_channels: list[str] = []
         self.target_group_nick = target_group
         self.nickserv_password = nickserv_pw
 

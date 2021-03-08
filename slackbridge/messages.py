@@ -31,7 +31,7 @@ FILEHOST = 'https://fluffy.cc'
 
 @functools.total_ordering
 class SlackMessage:
-    def __init__(self, raw_message: Dict[str, Any], bridge_bot: BridgeBot):
+    def __init__(self, raw_message: dict[str, Any], bridge_bot: BridgeBot):
         self.raw_message = raw_message
         self.bridge_bot = bridge_bot
         self.deferred = False
@@ -182,7 +182,7 @@ class SlackMessage:
         self,
         channel_name: str,
         user_bot: UserBot,
-        file_data: Dict[str, Any],
+        file_data: dict[str, Any],
     ) -> None:
         # Adapted from https://api.slack.com/tutorials/working-with-files
         auth = {
@@ -284,7 +284,7 @@ class IRCUser:
 
     def __init__(self, authenticated: bool = False):
         self.authenticated = authenticated
-        self.messages: List[SlackMessage] = []
+        self.messages: list[SlackMessage] = []
 
     def add_message(self, message: SlackMessage) -> None:
         self.messages.append(message)
