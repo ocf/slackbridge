@@ -5,7 +5,6 @@ import hashlib
 import re
 import sys
 from typing import Any
-from typing import Dict
 from typing import Match
 
 from emoji import emojize
@@ -69,9 +68,9 @@ def nick_from_irc_user(irc_user: str) -> str:
 
 def format_irc_message(
     text: str,
-    users: Dict[str, Any],
-    bots: Dict[str, Any],
-    channels: Dict[str, Any],
+    users: dict[str, Any],
+    bots: dict[str, Any],
+    channels: dict[str, Any],
 ) -> str:
     """
     Replace channels, users, commands, links, emoji, and any remaining stuff in
@@ -138,7 +137,7 @@ def format_irc_message(
     return text
 
 
-def format_slack_message(text: str, users: Dict[str, Any]) -> str:
+def format_slack_message(text: str, users: dict[str, Any]) -> str:
     """
     Strip any color codes coming from IRC, since Slack cannot display them
     The current solution is taken from https://stackoverflow.com/a/970723

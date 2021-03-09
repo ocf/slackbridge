@@ -4,11 +4,7 @@ import time
 from queue import PriorityQueue
 from typing import Any
 from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
 from typing import TypeVar
-from typing import Union
 
 from ocflib.misc.mail import send_problem_report
 from slackclient import SlackClient
@@ -30,15 +26,15 @@ class IRCBot(irc.IRCClient):
     # information is not passed around everywhere and to not have to make a
     # Slack API call each time this information is wanted, since it doesn't
     # change often and can be updated by events.
-    channels: Dict[str, Any] = {}
-    channel_name_to_uid: Dict[str, str] = {}
-    users: Dict[str, Any] = {}
-    bots: Dict[str, Any] = {}
+    channels: dict[str, Any] = {}
+    channel_name_to_uid: dict[str, str] = {}
+    users: dict[str, Any] = {}
+    bots: dict[str, Any] = {}
     # Used to download slack files
-    slack_token: Optional[str] = None
+    slack_token: str | None = None
     sc: SlackClient = None
     # Used to store lookup and deferred private messages
-    irc_users: Dict[str, Any] = {}
+    irc_users: dict[str, Any] = {}
 
     def __init__(self, sc: SlackClient, nickname: str, nickserv_pw: str):
         self.sc = sc
@@ -80,7 +76,7 @@ class LoopHandler():
     invalid input is given or some message handling code breaks for instance.
     """
 
-    def __init__(self, method: Callable[[], Any], delay: Union[int, float]):
+    def __init__(self, method: Callable[[], Any], delay: int | float):
         self.method = method
         self.delay = delay
 
@@ -190,7 +186,7 @@ class BridgeBot(IRCBot):
                 topic=new_topic,
             )
 
-    def irc_330(self, prefix: str, params: List[str]) -> None:
+    def irc_330(self, prefix: str, params: list[str]) -> None:
         """
         A 330-prefix response after a WHOIS [user] is sent
         if [user] is registered AND authenticated.
@@ -204,7 +200,7 @@ class BridgeBot(IRCBot):
 
         self.verify_auth(current_nickname, authenticated_name)
 
-    def irc_RPL_ENDOFWHOIS(self, prefix: str, params: List[str]) -> None:
+    def irc_RPL_ENDOFWHOIS(self, prefix: str, params: list[str]) -> None:
         """
         RPL_ENDOFWHOIS signifies end of a WHOIS list for [user].
 
@@ -270,7 +266,7 @@ class UserBot(IRCBot):
         nickname: str,
         realname: str,
         user_id: str,
-        joined_channels: List[str],
+        joined_channels: list[str],
         target_group: str,
         nickserv_pw: str,
     ):
