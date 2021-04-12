@@ -88,7 +88,7 @@ def format_irc_message(
         """
         chan_id = match.group(1)
         readable = match.group(2)
-        return '#{}'.format(readable or channels[chan_id])
+        return f'#{readable or channels[chan_id]}'
 
     def user_replace(match: Match[str]) -> str:
         """
@@ -115,7 +115,7 @@ def format_irc_message(
         """
         var = match.group(1)
         label = match.group(2)
-        return '<{}>'.format(label or var)
+        return f'<{label or var}>'
 
     # Remove newlines and carriage returns, since IRC doesn't have multi-line
     # messages, but Slack allows them

@@ -270,7 +270,7 @@ class UserBot(IRCBot):
         target_group: str,
         nickserv_pw: str,
     ):
-        intended_nickname = '{}-slack'.format(utils.strip_nick(nickname))
+        intended_nickname = f'{utils.strip_nick(nickname)}-slack'
 
         self.sc = sc
         self.slack_name = nickname
