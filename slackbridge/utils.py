@@ -164,6 +164,8 @@ def format_slack_message(text: str, users: dict[str, Any]) -> str:
     text = re.sub(r'\x03(?:\d{1,2}(?:,\d{1,2})?)?', '', text, flags=re.UNICODE)
     # we can be greedy here; nick is checked against valid list of users
     text = re.sub(r'([^\s]+)-slack', nick_replace, text)
+    # remove any @channel or @here
+    text = re.sub(r'<!(everyone|channel|here)>', r'<! \1>', text)
     return text
 
 
