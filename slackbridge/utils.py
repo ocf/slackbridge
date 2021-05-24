@@ -48,12 +48,12 @@ def strip_nick(nick: str) -> str:
     # This seems nicer than an ugly regex with a ton of escaping
     allowed_chars = '_-\\[]{}^`|'
 
-    return ''.join([
+    return ''.join(
         c
         if c.isalnum() or c in allowed_chars
         else ''
         for c in nick
-    ])
+    )
 
 
 def nick_from_irc_user(irc_user: str) -> str:
