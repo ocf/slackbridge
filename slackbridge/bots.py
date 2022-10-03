@@ -123,7 +123,7 @@ class BridgeBot(IRCBot):
 
     def rtm_connect(self) -> None:
         """Attempt to connect to Slack RTM."""
-        while not self.sc.rtm_connect(auto_reconnect=True):
+        while not self.sc.rtm_connect(with_team_state=False, auto_reconnect=True):
             log.err('Could not connect to Slack RTM, check token/rate limits')
             time.sleep(5)
         log.msg('Connected successfully to Slack RTM')
