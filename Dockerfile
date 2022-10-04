@@ -17,6 +17,7 @@ RUN install -d --owner=nobody /opt/slackbridge /opt/slackbridge/venv
 COPY requirements.txt /opt/slackbridge/
 RUN virtualenv -ppython3.7 /opt/slackbridge/venv \
     && /opt/slackbridge/venv/bin/pip install pip==9.0.1 \
+    && /opt/slackbridge/venv/bin/pip install setuptools==60.3.0 \
     && /opt/slackbridge/venv/bin/pip install \
         -r /opt/slackbridge/requirements.txt
 
