@@ -88,7 +88,7 @@ def format_irc_message(
         """
         chan_id = match.group(1)
         readable = match.group(2)
-        return f'#{readable or channels[chan_id].get('name')}'
+        return f'#{readable or channels[chan_id].get("name")}'
 
     def user_replace(match: Match[str]) -> str:
         """
