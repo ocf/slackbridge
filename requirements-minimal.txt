@@ -3,4 +3,4 @@ emoji
 ocflib
 pyOpenSSL
 slackclient<2
-Twisted<=20.3.0 # Newer Twisted has incomplete type stubs, so we hold it back for now
+Twisted<22.11.0 # Newer Twisted has incomplete type stubs, so we hold it back for now
