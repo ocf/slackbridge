@@ -1,4 +1,4 @@
-FROM docker.ocf.berkeley.edu/theocf/debian:bullseye-py
+FROM docker.ocf.berkeley.edu/theocf/debian:bullseye
 
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -7,7 +7,7 @@ RUN apt-get update \
         libcrack2-dev \
         libffi-dev \
         libssl-dev \
-        python3.7-dev \
+        python3.9-dev \
         virtualenv \
         rustc \
     && apt-get clean \
@@ -16,9 +16,9 @@ RUN apt-get update \
 RUN install -d --owner=nobody /opt/slackbridge /opt/slackbridge/venv
 
 COPY requirements.txt /opt/slackbridge/
-RUN virtualenv -ppython3.7 /opt/slackbridge/venv \
-    && /opt/slackbridge/venv/bin/pip install pip==9.0.1 \
-    && /opt/slackbridge/venv/bin/pip install setuptools==54.0.0 \
+RUN virtualenv -ppython3.9 /opt/slackbridge/venv \
+    && /opt/slackbridge/venv/bin/pip install pip \
+    && /opt/slackbridge/venv/bin/pip install setuptools==65.0.1 \
     && /opt/slackbridge/venv/bin/pip install \
         -r /opt/slackbridge/requirements.txt
 
