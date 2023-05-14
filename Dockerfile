@@ -1,4 +1,4 @@
-FROM docker.ocf.berkeley.edu/theocf/debian:stretch
+FROM docker.ocf.berkeley.edu/theocf/debian:bullseye-py
 
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -9,6 +9,7 @@ RUN apt-get update \
         libssl-dev \
         python3.7-dev \
         virtualenv \
+        rustc \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
