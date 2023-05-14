@@ -6,7 +6,7 @@ cffi==1.14.5
 chardet==3.0.4
 constantly==15.1.0
 cracklib==2.9.3
-cryptography==3.3.2
+cryptography==39.0.1
 Deprecated==1.2.11
 dnspython==2.1.0
 emoji==1.2.0
