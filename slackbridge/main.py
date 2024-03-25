@@ -85,7 +85,7 @@ def main() -> None:
             channel['members'] += results['members']
 
         # Make sure all members have been added successfully
-        assert(len(channel['members']) >= channel['num_members'])
+        assert (len(channel['members']) >= channel['num_members'])
 
     # Get all users from Slack, but don't select bots, deactivated users, or
     # slackbot, since they don't need IRC bots (they aren't users)
